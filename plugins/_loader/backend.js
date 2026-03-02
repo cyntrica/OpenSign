@@ -1,11 +1,9 @@
-/**
- * OpenSign Plugin Loader (Backend)
- *
- * Scans plugins/*/manifest.json, registers Cloud Functions, triggers,
- * Express routes, scheduled jobs, and runs plugin setup() entry points.
- *
- * Called from cloud/main.js at server startup.
- */
+// OpenSign Plugin Loader (Backend)
+//
+// Scans plugin manifest.json files, registers Cloud Functions, triggers,
+// Express routes, scheduled jobs, and runs plugin setup() entry points.
+//
+// Called from cloud/main.js at server startup.
 
 import fs from 'node:fs';
 import path from 'node:path';
