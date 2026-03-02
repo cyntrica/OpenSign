@@ -36,7 +36,11 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: env.PORT || 3000, // Same port as CRA
-      open: true
+      open: true,
+      fs: {
+        // Allow serving files from the plugins directory (outside project root)
+        allow: [resolve(__dirname, "../..")]
+      }
     },
     test: {
       environment: "jsdom",

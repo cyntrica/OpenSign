@@ -48,7 +48,7 @@ export default function opensignPlugins() {
       // Pages -> lazy routes
       if (fe.pages) {
         for (const page of fe.pages) {
-          const importPath = `../../../plugins/${plugin._dirName}/${page.component}`;
+          const importPath = path.join(pluginsDir, plugin._dirName, page.component);
           const varName = `${plugin.namespace}_${page.path.replace(/\//g, '_').replace(/^_/, '')}`;
           imports.push(
             `const ${varName} = lazy(() => import("${importPath}"));`
