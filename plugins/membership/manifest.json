@@ -17,7 +17,9 @@
       { "name": "getUsage", "file": "backend/functions/getUsage.js" },
       { "name": "createCheckout", "file": "backend/functions/createCheckout.js" },
       { "name": "createPortalSession", "file": "backend/functions/createPortalSession.js" },
-      { "name": "cancelSubscription", "file": "backend/functions/cancelSubscription.js" }
+      { "name": "cancelSubscription", "file": "backend/functions/cancelSubscription.js" },
+      { "name": "savePlan", "file": "backend/functions/savePlan.js" },
+      { "name": "deletePlan", "file": "backend/functions/deletePlan.js" }
     ],
     "routes": [
       { "method": "POST", "path": "/stripe/webhook", "file": "backend/routes/stripeWebhook.js" }
@@ -36,6 +38,14 @@
         "title": "Billing",
         "path": "billing",
         "position": "before:Settings"
+      }
+    ],
+    "adminPages": [
+      {
+        "path": "/settings/plans",
+        "component": "frontend/pages/PlanAdmin.jsx",
+        "title": "Plan Management",
+        "icon": "fa-light fa-layer-group"
       }
     ]
   },

@@ -4,6 +4,7 @@
 // module (virtual:opensign-plugins) that exports:
 //   - pluginRoutes: Array of { path, component (lazy), auth }
 //   - pluginMenuItems: Array of { icon, title, position, ... }
+//   - pluginAdminMenuItems: Array of Settings-child menu items (admin-only)
 //   - pluginThemeOverrides: Object of theme overrides for DaisyUI
 
 import fs from 'node:fs';
@@ -39,6 +40,7 @@ export default function opensignPlugins() {
     const imports = [];
     const routeEntries = [];
     const menuEntries = [];
+    const adminMenuEntries = [];
     let themeOverrides = {};
 
     for (const plugin of plugins) {
@@ -75,6 +77,29 @@ export default function opensignPlugins() {
         }
       }
 
+      // Admin pages (Settings children, admin-role-only)
+      if (fe.adminPages) {
+        for (const page of fe.adminPages) {
+          const importPath = path.join(pluginsDir, plugin._dirName, page.component);
+          const varName = `${plugin.namespace}_admin_${page.path.replace(/\//g, '_').replace(/^_/, '')}`;
+          imports.push(
+            `const ${varName} = lazy(() => import("${importPath}"));`
+          );
+          routeEntries.push(
+            `{ path: "${page.path}", component: ${varName}, auth: true, plugin: "${plugin.namespace}" }`
+          );
+          adminMenuEntries.push(JSON.stringify({
+            icon: page.icon || 'fa-light fa-puzzle-piece',
+            title: page.title,
+            target: '_self',
+            pageType: '',
+            description: '',
+            objectId: page.path.replace(/^\//, ''),
+            plugin: plugin.namespace,
+          }));
+        }
+      }
+
       // Theme overrides
       if (fe.themeOverrides) {
         for (const [themeName, overrides] of Object.entries(fe.themeOverrides)) {
@@ -92,6 +117,8 @@ ${imports.join('\n')}
 export const pluginRoutes = [${routeEntries.join(',\n  ')}];
 
 export const pluginMenuItems = [${menuEntries.join(',\n  ')}];
+
+export const pluginAdminMenuItems = [${adminMenuEntries.join(',\n  ')}];
 
 export const pluginThemeOverrides = ${JSON.stringify(themeOverrides)};
 `;

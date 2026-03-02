@@ -8,7 +8,7 @@ const userssetting = [
     objectId: "users"
   }
 ];
-export const subSetting = [
+const subSettingBase = [
   {
     icon: "fa-light fa-sliders",
     title: "Preferences",
@@ -181,7 +181,12 @@ const sidebarList = [
   }
 ];
 // ─── Plugin menu item merging ─────────────────────────────────────────────
-import { pluginMenuItems } from "virtual:opensign-plugins";
+import { pluginMenuItems, pluginAdminMenuItems } from "virtual:opensign-plugins";
+
+// Merge plugin admin menu items into Settings children (admin-only)
+export const subSetting = pluginAdminMenuItems?.length
+  ? [...subSettingBase, ...pluginAdminMenuItems]
+  : subSettingBase;
 
 /**
  * Merges plugin menu items into the sidebar list using position hints.
