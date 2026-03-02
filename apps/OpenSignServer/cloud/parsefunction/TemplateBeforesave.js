@@ -2,6 +2,12 @@ import { MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, MAX_NOTE_LENGTH } from '../../
 import { setTemplateCount } from '../../utils/CountUtils.js';
 
 async function TemplateBeforeSave(request) {
+  // Plugin hook: check limits on new template creation
+  if (!request.original && globalThis.__pluginHooks?.runHooks) {
+    await globalThis.__pluginHooks.runHooks('beforeTemplateSave', {
+      request, object: request.object, user: request.user,
+    });
+  }
   if (!request.original) {
     const validations = [
       { field: 'Name', max: MAX_NAME_LENGTH },

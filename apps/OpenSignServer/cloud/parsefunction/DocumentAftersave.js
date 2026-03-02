@@ -2,6 +2,12 @@ async function DocumentAftersave(request) {
   try {
     if (!request.original) {
       console.log('new entry is insert in contracts_Document');
+      // Plugin hook: afterDocumentSave (fire-and-forget)
+      if (globalThis.__pluginHooks?.runHooks) {
+        globalThis.__pluginHooks.runHooks('afterDocumentSave', {
+          request, object: request.object, user: request.user,
+        }).catch(err => console.error('[plugins] afterDocumentSave error:', err));
+      }
       const obj = request.object;
       const objId = obj?.id;
       const createdAt = obj?.get?.('createdAt');

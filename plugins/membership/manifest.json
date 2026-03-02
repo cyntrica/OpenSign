@@ -1,0 +1,48 @@
+{
+  "name": "membership",
+  "namespace": "membership",
+  "version": "1.0.0",
+  "displayName": "Membership & Billing",
+  "description": "Stripe-powered membership with usage limits for documents, templates, storage, and team seats.",
+  "envVars": [
+    { "name": "STRIPE_SECRET_KEY", "required": true },
+    { "name": "STRIPE_WEBHOOK_SECRET", "required": true },
+    { "name": "STRIPE_PUBLISHABLE_KEY", "required": false }
+  ],
+  "backend": {
+    "entry": "backend/index.js",
+    "functions": [
+      { "name": "getPlans", "file": "backend/functions/getPlans.js" },
+      { "name": "getSubscription", "file": "backend/functions/getSubscription.js" },
+      { "name": "getUsage", "file": "backend/functions/getUsage.js" },
+      { "name": "createCheckout", "file": "backend/functions/createCheckout.js" },
+      { "name": "createPortalSession", "file": "backend/functions/createPortalSession.js" },
+      { "name": "cancelSubscription", "file": "backend/functions/cancelSubscription.js" }
+    ],
+    "routes": [
+      { "method": "POST", "path": "/stripe/webhook", "file": "backend/routes/stripeWebhook.js" }
+    ],
+    "triggers": [
+      { "type": "beforeSave", "className": "contracts_Users", "file": "backend/triggers/contractsUsersBeforeSave.js" }
+    ]
+  },
+  "frontend": {
+    "pages": [
+      { "path": "/billing", "component": "frontend/pages/Billing.jsx", "auth": true }
+    ],
+    "menuItems": [
+      {
+        "icon": "fa-light fa-credit-card",
+        "title": "Billing",
+        "path": "billing",
+        "position": "before:Settings"
+      }
+    ]
+  },
+  "hooks": [
+    { "event": "beforeDocumentSave", "handler": "backend/hooks/beforeDocumentSave.js" },
+    { "event": "afterDocumentSave", "handler": "backend/hooks/afterDocumentSave.js" },
+    { "event": "beforeTemplateSave", "handler": "backend/hooks/beforeTemplateSave.js" },
+    { "event": "onUserSignup", "handler": "backend/hooks/onUserSignup.js" }
+  ]
+}

@@ -123,6 +123,13 @@ export default async function usersignup(request) {
         newObj.set('Timezone', userDetails.timezone);
       }
       const extRes = await newObj.save(null, { useMasterKey: true });
+      // Plugin hook: onUserSignup (fire-and-forget)
+      if (globalThis.__pluginHooks?.runHooks) {
+        globalThis.__pluginHooks.runHooks('onUserSignup', {
+          userId: user.id, tenantId: tenantRes.id, extUserId: extRes.id,
+          email: userDetails?.email,
+        }).catch(err => console.error('[plugins] onUserSignup error:', err));
+      }
       return { message: 'User sign up', sessionToken: user.sessionToken };
     }
   } catch (err) {

@@ -167,7 +167,10 @@ export const config = {
 export const app = express();
 globalThis.__pluginExpressApp = app; // Expose for plugin route registration
 app.use(cors());
-app.use(express.json({ limit: '100mb' }));
+app.use(express.json({
+  limit: '100mb',
+  verify: (req, res, buf) => { if (req.url?.startsWith('/plugins/')) req.rawBody = buf; }
+}));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(function (req, res, next) {
   req.headers['x-real-ip'] = getUserIP(req);
