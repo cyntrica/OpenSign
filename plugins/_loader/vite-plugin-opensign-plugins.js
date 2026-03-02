@@ -1,12 +1,10 @@
-/**
- * Vite Plugin: OpenSign Plugin Discovery
- *
- * Scans plugins/*/manifest.json at build time and generates a virtual module
- * (`virtual:opensign-plugins`) that exports:
- *   - pluginRoutes: Array of { path, component (lazy), auth }
- *   - pluginMenuItems: Array of { icon, title, position, ... }
- *   - pluginThemeOverrides: Object of theme overrides for DaisyUI
- */
+// Vite Plugin: OpenSign Plugin Discovery
+//
+// Scans each plugin's manifest.json at build time and generates a virtual
+// module (virtual:opensign-plugins) that exports:
+//   - pluginRoutes: Array of { path, component (lazy), auth }
+//   - pluginMenuItems: Array of { icon, title, position, ... }
+//   - pluginThemeOverrides: Object of theme overrides for DaisyUI
 
 import fs from 'node:fs';
 import path from 'node:path';
