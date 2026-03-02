@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-const getThemeOverrides = require("./../../plugins/_loader/tailwind-plugin-overrides");
+const getThemeOverrides = require("./../../plugins/_loader/tailwind-plugin-overrides.cjs");
 const pluginThemeOverrides = getThemeOverrides();
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
