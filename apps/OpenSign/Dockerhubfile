@@ -17,6 +17,8 @@ COPY apps/OpenSign/entrypoint.sh .
 
 # Copy plugins directory for Vite build-time plugin discovery
 COPY plugins/ ../../plugins/
+# Symlink node_modules so Rollup can resolve deps from plugin files
+RUN ln -sf /usr/src/app/node_modules ../../plugins/node_modules
 
 # make the entrypoint.sh file executable
 RUN chmod +x entrypoint.sh
