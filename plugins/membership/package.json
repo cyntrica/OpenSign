@@ -1,6 +1,7 @@
 {
   "name": "opensign-plugin-membership",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "serverDependencies": {
     "stripe": "^17.0.0"
