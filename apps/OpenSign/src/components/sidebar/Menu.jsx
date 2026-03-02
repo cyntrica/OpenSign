@@ -28,7 +28,7 @@ const Menu = ({ item, isOpen, closeSidebar }) => {
           <i className={`${item.icon} text-[20px]`} aria-hidden="true"></i>
         </span>
         <span className="flex items-center mb-0.5">
-          {t(`sidebar.${item.title}`, { appName: drivename })}
+          {t(`sidebar.${item.title}`, { defaultValue: item.title, appName: drivename })}
         </span>
       </NavLink>
     </li>

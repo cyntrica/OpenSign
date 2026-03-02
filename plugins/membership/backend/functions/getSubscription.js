@@ -29,5 +29,12 @@ export default async function getSubscription(request) {
     return { status: 'none', PlanId: null };
   }
 
-  return subscription.toJSON();
+  const result = subscription.toJSON();
+  // Strip __type/className from included PlanId so the client Parse SDK
+  // doesn't auto-convert it to a Parse.Object (which breaks .name access)
+  if (result.PlanId && result.PlanId.__type) {
+    delete result.PlanId.__type;
+    delete result.PlanId.className;
+  }
+  return result;
 }
