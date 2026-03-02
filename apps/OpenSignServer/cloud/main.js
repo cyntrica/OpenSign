@@ -136,3 +136,16 @@ Parse.Cloud.define('getdefaultsignature', getSignature);
 Parse.Cloud.define('updateemailtemplates', updateEmailTemplates);
 Parse.Cloud.define('triggerevent', triggerEvent);
 Parse.Cloud.define('setwidgetpreferences', setWidgetPreferences);
+
+// ─── Plugin Loader ───────────────────────────────────────────────────────────
+// Scans plugins/*/manifest.json and registers Cloud Functions, triggers,
+// Express routes, jobs, and hooks. All plugin code lives in /plugins/.
+import { loadPlugins, runHooks } from '../../../plugins/_loader/backend.js';
+import * as Utils from '../Utils.js';
+
+// Make runHooks available globally for instrumented core functions (e.g. PDF.js)
+globalThis.__pluginHooks = { runHooks };
+
+loadPlugins(Utils).catch(err => {
+  console.error('[plugins] Fatal error loading plugins:', err);
+});

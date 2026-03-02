@@ -15,6 +15,9 @@ COPY apps/OpenSign/ .
 COPY apps/OpenSign/.husky .
 COPY apps/OpenSign/entrypoint.sh .
 
+# Copy plugins directory for Vite build-time plugin discovery
+COPY plugins/ ../../plugins/
+
 # make the entrypoint.sh file executable
 RUN chmod +x entrypoint.sh
 

@@ -180,4 +180,40 @@ const sidebarList = [
     ]
   }
 ];
-export default sidebarList;
+// ─── Plugin menu item merging ─────────────────────────────────────────────
+import { pluginMenuItems } from "virtual:opensign-plugins";
+
+/**
+ * Merges plugin menu items into the sidebar list using position hints.
+ * Supported positions:
+ *   "before:Title"  — insert before the item with matching title
+ *   "after:Title"   — insert after the item with matching title
+ *   "end"           — append at the end (default)
+ */
+function mergePluginMenuItems(baseList, pluginItems) {
+  if (!pluginItems || pluginItems.length === 0) return baseList;
+  const merged = [...baseList];
+  for (const item of pluginItems) {
+    const pos = item.position || "end";
+    const { position, plugin, ...menuItem } = item; // strip position & plugin meta
+    if (pos === "end") {
+      merged.push(menuItem);
+    } else if (pos.startsWith("before:") || pos.startsWith("after:")) {
+      const [directive, targetTitle] = pos.split(":");
+      const idx = merged.findIndex(
+        (m) => m.title.toLowerCase() === targetTitle.toLowerCase()
+      );
+      if (idx !== -1) {
+        merged.splice(directive === "before" ? idx : idx + 1, 0, menuItem);
+      } else {
+        merged.push(menuItem); // fallback to end if target not found
+      }
+    } else {
+      merged.push(menuItem);
+    }
+  }
+  return merged;
+}
+
+const mergedSidebarList = mergePluginMenuItems(sidebarList, pluginMenuItems);
+export default mergedSidebarList;

@@ -4,6 +4,7 @@ services:
     container_name: OpenSignServer-container
     volumes:
       - opensign-files:/usr/src/app/files
+      - ./plugins:/usr/plugins:ro
     ports:
       - "8080:8080"
     depends_on:

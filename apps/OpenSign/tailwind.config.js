@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const getThemeOverrides = require("./../../plugins/_loader/tailwind-plugin-overrides");
+const pluginThemeOverrides = getThemeOverrides();
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
@@ -117,7 +119,8 @@ module.exports = {
           // Optional polish
           "--navbar-padding": "0.8rem",
           "--border-color": "#2C2C2C", // Card/table separation
-          "--tooltip-color": "#1F2937"
+          "--tooltip-color": "#1F2937",
+          ...(pluginThemeOverrides.opensigndark || {})
         }
       },
       {
@@ -144,7 +147,8 @@ module.exports = {
           "error-content": "#16090a",
           "--rounded-btn": "1.9rem",
           "--tab-border": "2px",
-          "--tab-radius": "0.7rem"
+          "--tab-radius": "0.7rem",
+          ...(pluginThemeOverrides.opensigncss || {})
         }
       }
     ],

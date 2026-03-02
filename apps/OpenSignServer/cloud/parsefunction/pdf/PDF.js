@@ -354,6 +354,15 @@ async function PDF(req) {
   const randomNumber = Math.floor(Math.random() * 5000);
   const pfxname = `keystore_${randomNumber}.pfx`;
   try {
+    // ─── Plugin hook: beforeSign ───
+    // Plugins can inspect/modify payload or throw to abort signing.
+    if (globalThis.__pluginHooks?.runHooks) {
+      await globalThis.__pluginHooks.runHooks('beforeSign', {
+        docId,
+        userId: req.params.userId,
+        user: req.user,
+      });
+    }
     const userIP = req.headers['x-real-ip']; // client IPaddress
     const reqUserId = req.params.userId;
     const isCustomMail = req.params.isCustomCompletionMail || false;
@@ -493,6 +502,15 @@ async function PDF(req) {
         unlinkFile(signedFilePath);
         // console.log(`New Signed PDF created called: ${filePath}`);
         if (updatedDoc.message === 'success') {
+          // ─── Plugin hook: afterSign ───
+          if (globalThis.__pluginHooks?.runHooks) {
+            globalThis.__pluginHooks.runHooks('afterSign', {
+              docId: req.params.docId,
+              signedUrl: data.imageUrl,
+              isCompleted: updatedDoc.isCompleted,
+              userId: signUser.objectId,
+            }).catch(err => console.error('[plugins] afterSign hook error:', err));
+          }
           return { status: 'success', data: data.imageUrl };
         } else {
           const error = new Error('Please provide required parameters!');

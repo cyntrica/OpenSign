@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { lazyWithRetry, hideUpgradeProgress } from "./utils";
 import { Routes, Route, BrowserRouter } from "react-router";
 import { pdfjs } from "react-pdf";
+import { pluginRoutes } from "virtual:opensign-plugins";
 import Form from "./pages/Form";
 import Report from "./pages/Report";
 import Dashboard from "./pages/Dashboard";
@@ -135,6 +136,18 @@ function App() {
                 path="/preferences"
                 element={<Lazy Page={Preferences} />}
               />
+              {/* Plugin routes — injected from plugins/*/manifest.json */}
+              {pluginRoutes.map((r) => (
+                <Route
+                  key={r.path}
+                  path={r.path}
+                  element={
+                    <Suspense fallback={<Loader />}>
+                      <r.component />
+                    </Suspense>
+                  }
+                />
+              ))}
             </Route>
             <Route path="/success" element={<DocSuccessPage />} />
             <Route path="*" element={<PageNotFound />} />

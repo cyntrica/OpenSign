@@ -56,6 +56,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "scripts": {
+    "postinstall": "node ../../plugins/_loader/install-plugin-deps.js || true",
     "build": "npm run version && NODE_OPTIONS=\"--max-old-space-size=8192\" vite build",
     "start-dev": "vite",
     "dev": "vite",

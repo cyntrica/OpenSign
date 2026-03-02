@@ -1,0 +1,39 @@
+{
+  "name": "hello-world",
+  "namespace": "hello",
+  "version": "1.0.0",
+  "displayName": "Hello World Test Plugin",
+  "description": "Minimal test plugin to verify the plugin loader works correctly.",
+  "backend": {
+    "entry": "backend/index.js",
+    "functions": [
+      {
+        "name": "ping",
+        "file": "backend/ping.js"
+      }
+    ]
+  },
+  "frontend": {
+    "pages": [
+      {
+        "path": "/hello",
+        "component": "frontend/pages/HelloWorld.jsx",
+        "auth": true
+      }
+    ],
+    "menuItems": [
+      {
+        "icon": "fa-light fa-plug",
+        "title": "Hello Plugin",
+        "path": "hello",
+        "position": "before:Settings"
+      }
+    ]
+  },
+  "hooks": [
+    {
+      "event": "afterSign",
+      "handler": "backend/hooks/afterSign.js"
+    }
+  ]
+}
