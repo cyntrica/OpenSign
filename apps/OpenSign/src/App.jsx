@@ -136,7 +136,7 @@ function App() {
                 path="/preferences"
                 element={<Lazy Page={Preferences} />}
               />
-              {/* Plugin routes — injected from plugins/*/manifest.json */}
+              {/* Plugin routes — injected from plugin manifests */}
               {pluginRoutes.map((r) => (
                 <Route
                   key={r.path}
