@@ -47,8 +47,7 @@ function Form() {
 }
 
 const Forms = (props) => {
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const { t } = useTranslation();
   const abortController = new AbortController();
   const inputFileRef = useRef(null);

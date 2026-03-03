@@ -82,8 +82,7 @@ function PdfRequestFiles(
   const isShowModal = useSelector((state) => state.widget.isShowModal);
   const defaultSignImg = useSelector((state) => state.widget.defaultSignImg);
   const myInitial = useSelector((state) => state.widget.myInitial);
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const [pdfDetails, setPdfDetails] = useState([]);
   const [signedSigners, setSignedSigners] = useState([]);
   const [unsignedSigners, setUnSignedSigners] = useState([]);

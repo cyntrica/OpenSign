@@ -3,8 +3,9 @@ import Package from "../../package.json";
 import axios from "axios";
 import { openInNewTab } from "../constant/Utils";
 import { useTranslation } from "react-i18next";
+import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 const Footer = () => {
-  const appName = "OpenSign™";
+  const { appName, footerText, footerUrl } = useBranding();
   const { t } = useTranslation();
   const [showButton, setShowButton] = useState(false);
   const [version, setVersion] = useState("");
@@ -12,7 +13,7 @@ const Footer = () => {
     axios
       .get("/version.txt")
       .then((response) => {
-        setVersion(response.data); // Set the retrieved data to the state variable
+        setVersion(response.data);
       })
       .catch((error) => {
         console.error("Error reading the file:", error);
@@ -41,20 +42,30 @@ const Footer = () => {
   }, []);
 
   const openUrl = () => {
-    openInNewTab(
-      "https://github.com/OpenSignLabs/OpenSign/releases/tag/" + version
-    );
+    if (footerUrl) {
+      openInNewTab(footerUrl);
+    }
   };
+
+  const displayText = footerText || `${t("all-right")} \u00A9 ${new Date().getFullYear()} ${appName}`;
+
   return (
     <>
       <footer className="op-footer op-footer-center py-3 bg-base-300 text-base-content text-center text-[13px]">
         <aside>
           <p>
-            {t("all-right")} &copy; {new Date().getFullYear()} &nbsp;
-            <span onClick={openUrl} className="hover:underline cursor-pointer">
-              {appName} ( {t("version")}:{" "}
-              {version ? version : `${Package.version} `})
-            </span>
+            {footerUrl ? (
+              <span onClick={openUrl} className="hover:underline cursor-pointer">
+                {displayText}
+              </span>
+            ) : (
+              <span>{displayText}</span>
+            )}
+            {version && (
+              <span className="ml-1 text-base-content/50">
+                ({t("version")}: {version || Package.version})
+              </span>
+            )}
           </p>
         </aside>
       </footer>

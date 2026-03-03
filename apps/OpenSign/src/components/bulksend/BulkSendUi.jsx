@@ -42,8 +42,7 @@ const requiredAsteriskCls = (isRequired = false) => {
 };
 const BulkSendUi = (props) => {
   const { t } = useTranslation();
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const dispatch = useDispatch();
   const { isBulkLoader } = useSelector((state) => state.widget);
   const [forms, setForms] = useState([]);

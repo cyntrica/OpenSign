@@ -18,8 +18,7 @@ import { sessionStatus } from "../redux/reducers/userReducer";
 import SessionExpiredModal from "../primitives/SessionExpiredModal";
 
 const HomeLayout = () => {
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const tourArr = useSelector((state) => state.TourSteps);

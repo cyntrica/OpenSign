@@ -15,8 +15,7 @@ import { useTranslation } from "react-i18next";
 import { emailRegex } from "../constant/const";
 
 const AddAdmin = () => {
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();

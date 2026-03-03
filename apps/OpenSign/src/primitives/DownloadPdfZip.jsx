@@ -12,8 +12,7 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
 function DownloadPdfZip(props) {
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const { t } = useTranslation();
   const [selectType, setSelectType] = useState(1);
   const [isDownloading, setIsDownloading] = useState(false);

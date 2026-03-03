@@ -22,6 +22,7 @@ import { serverUrl_fn } from "./constant/appinfo";
 import DocSuccessPage from "./pages/DocSuccessPage";
 import DragProvider from "./components/DragProivder";
 import Title from "./components/Title";
+import { BrandingProvider } from "../../../plugins/branding/frontend/BrandingProvider";
 const DebugPdf = lazyWithRetry(() => import("./pages/DebugPdf"));
 const ForgetPassword = lazyWithRetry(() => import("./pages/ForgetPassword"));
 const GuestLogin = lazyWithRetry(() => import("./pages/GuestLogin"));
@@ -61,6 +62,7 @@ function App() {
       {isloading ? (
         <AppLoader />
       ) : (
+        <BrandingProvider>
         <BrowserRouter>
           <Title />
           <Routes>
@@ -153,6 +155,7 @@ function App() {
             <Route path="*" element={<PageNotFound />} />
           </Routes>
         </BrowserRouter>
+        </BrandingProvider>
       )}
     </div>
   );

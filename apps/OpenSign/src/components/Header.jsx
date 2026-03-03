@@ -15,12 +15,14 @@ import { appInfo } from "../constant/appinfo";
 import { useDispatch } from "react-redux";
 import { toggleSidebar } from "../redux/reducers/sidebarReducer";
 import { sessionStatus } from "../redux/reducers/userReducer";
+import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 
 const Header = ({ isConsole, setIsLoggingOut }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { width } = useWindowSize();
   const dispatch = useDispatch();
+  const branding = useBranding();
   const username = localStorage.getItem("username") || "";
   const image = localStorage.getItem("profileImg") || dp;
   const [isOpen, setIsOpen] = useState(false);
@@ -149,8 +151,8 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                 className="object-contain h-full w-auto"
                 src={
                       isDarkTheme
-                      ? "/static/js/assets/images/logo-dark.png"
-                      : applogo
+                      ? (branding.logoDarkUrl || "/static/js/assets/images/logo-dark.png")
+                      : (branding.logoUrl || applogo)
                 }
                 alt="logo"
               />

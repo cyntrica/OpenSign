@@ -80,8 +80,7 @@ function SignYourSelf() {
   const dispatch = useDispatch();
   const windowSize = useWindowSize();
   const isShowModal = useSelector((state) => state.widget.isShowModal);
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const divRef = useRef(null);
   const nodeRef = useRef(null);
   const pdfRef = useRef();

@@ -7,6 +7,43 @@ Based on [OpenSign](https://github.com/OpenSignLabs/OpenSign) v2.35.0. Fork main
 
 ## [Unreleased] — 2026-03-02
 
+### Branding Plugin (White-Label)
+
+Admin-configurable branding that replaces all OpenSign references with dynamic values. All settings managed through a "Branding" admin page under Settings.
+
+**Data model** (1 Parse class, singleton):
+- `branding_Settings` — App name, logo URLs (light/dark/favicon/email), footer text/URL, social media links array, theme color overrides for light and dark themes. CLP: public read (needed for unauthenticated pages), masterKey-only write. Seeded with defaults on first startup.
+
+**Cloud Functions** (3 total):
+- `branding_getSettings` — Returns singleton branding settings. Public, no auth required.
+- `branding_saveSettings` — Upserts branding settings (admin-role-gated). Validates appName, socialLinks structure, and theme color tokens against allowed DaisyUI token names with hex format check.
+- `branding_uploadLogo` — Accepts base64 file data + type (light/dark/favicon/email), saves as Parse File, updates corresponding field. Size limits: 2MB for logos, 512KB for favicon.
+
+**BrandingProvider** (React Context):
+- `BrandingProvider.jsx` — Context provider wrapping the entire app tree (in `App.jsx` above `BrowserRouter`). Loads branding from server on mount, caches to localStorage for instant hydration. Exposes `useBranding()` hook.
+- `oklchConvert.js` — Pure-math hex-to-OKLCH color conversion (hex → sRGB → linear sRGB → XYZ D65 → OKLAB → OKLCH). No external dependencies.
+- `applyThemeOverrides.js` — Runtime CSS injection. Creates/updates a `<style>` element with DaisyUI CSS variable overrides (`--p`, `--s`, `--a`, `--b1`, etc.) scoped to `[data-theme="opensigncss"]` and `[data-theme="opensigndark"]`.
+
+**Frontend — Branding admin page** (`/settings/branding`, Settings dropdown, admin-only):
+- 4-tab interface: General, Logo & Favicon, Theme Colors, Social Media.
+- General: app name, footer text, footer URL.
+- Logo & Favicon: file upload for light/dark logos and favicon with preview, email logo URL text field.
+- Theme Colors: color pickers for 16 DaisyUI tokens in two columns (light/dark), with per-token reset buttons.
+- Social Media: `SocialLinkEditor` component — sortable list of icon class + title + URL, add/remove/reorder.
+
+**App name sweep** (26 files modified):
+- Replaced all hardcoded `"OpenSign™"` with `localStorage.getItem("branding_appName") || "SineSeal"` across 26 source files.
+- Replaced `drivename = appName === "OpenSign™" ? "OpenSign™" : ""` with `drivename = appName` in 6 files.
+- `menuJson.js` — Drive title now reads from branding cache.
+- `Sidebar.jsx` — `aria-label` changed from "OpenSign Sidebar Navigation" to "Sidebar Navigation".
+
+**Core file changes** (4 structural, 26 app-name replacements):
+- `App.jsx` — Wrapped with `<BrandingProvider>` above `<BrowserRouter>`.
+- `SocialMedia.jsx` — Replaced 50-line hardcoded component with dynamic rendering from `useBranding().socialLinks`. Filters out links with empty URLs.
+- `Footer.jsx` — Dynamic app name, custom footer text/URL from branding context.
+- `Header.jsx` — Logo source reads from `useBranding().logoUrl`/`logoDarkUrl` with fallback to existing paths.
+- `Title.jsx` — Dynamic app name and favicon from branding context.
+
 ### Plugin Architecture (Phase 1–4)
 
 A manifest-driven plugin system enabling isolated customization without modifying the OpenSign core. Plugins declare Cloud Functions, Parse triggers, Express routes, application hooks, frontend pages, and menu items through a single `manifest.json`.
@@ -125,9 +162,9 @@ Stripe-powered subscription management with usage limit enforcement. Infrastruct
 
 ## Files Changed (from upstream v2.35.0)
 
-52 files changed, 2450 insertions, 11 deletions.
+~95 files changed, ~4500 insertions, ~50 deletions.
 
-**Core modifications** (13 files, ~60 additive lines):
+**Core modifications** (13 files — plugin system hooks + ~30 files branding sweep):
 - `apps/OpenSignServer/index.js`
 - `apps/OpenSignServer/cloud/main.js`
 - `apps/OpenSignServer/cloud/parsefunction/DocumentBeforesave.js`
@@ -183,3 +220,49 @@ Stripe-powered subscription management with usage limit enforcement. Infrastruct
 - `plugins/membership/frontend/pages/PlanAdmin.jsx`
 - `plugins/membership/frontend/components/UsageBar.jsx`
 - `plugins/membership/frontend/components/PlanCard.jsx`
+
+**Branding plugin** (13 files):
+- `plugins/branding/manifest.json`
+- `plugins/branding/package.json`
+- `plugins/branding/backend/index.js`
+- `plugins/branding/backend/lib/defaults.js`
+- `plugins/branding/backend/lib/requireAdmin.js`
+- `plugins/branding/backend/functions/getSettings.js`
+- `plugins/branding/backend/functions/saveSettings.js`
+- `plugins/branding/backend/functions/uploadLogo.js`
+- `plugins/branding/frontend/BrandingProvider.jsx`
+- `plugins/branding/frontend/lib/oklchConvert.js`
+- `plugins/branding/frontend/lib/applyThemeOverrides.js`
+- `plugins/branding/frontend/components/SocialLinkEditor.jsx`
+- `plugins/branding/frontend/pages/BrandingAdmin.jsx`
+
+**Branding sweep — app name replacements** (26 client files):
+- `apps/OpenSign/src/constant/Utils.js` (4 instances + localStorage)
+- `apps/OpenSign/src/json/menuJson.js`
+- `apps/OpenSign/src/components/SocialMedia.jsx` (full rewrite)
+- `apps/OpenSign/src/components/Footer.jsx` (full rewrite)
+- `apps/OpenSign/src/components/Header.jsx`
+- `apps/OpenSign/src/components/Title.jsx`
+- `apps/OpenSign/src/components/sidebar/Sidebar.jsx`
+- `apps/OpenSign/src/components/sidebar/Menu.jsx`
+- `apps/OpenSign/src/components/sidebar/SubMenu.jsx`
+- `apps/OpenSign/src/components/pdf/EditTemplate.jsx`
+- `apps/OpenSign/src/components/pdf/AgreementContent.jsx`
+- `apps/OpenSign/src/components/preferences/MailTemplateEditor.jsx`
+- `apps/OpenSign/src/components/shared/fields/FolderModal.jsx`
+- `apps/OpenSign/src/components/shared/fields/SelectFolder.jsx`
+- `apps/OpenSign/src/components/bulksend/BulkSendUi.jsx`
+- `apps/OpenSign/src/pages/Login.jsx`
+- `apps/OpenSign/src/pages/GuestLogin.jsx`
+- `apps/OpenSign/src/pages/Form.jsx`
+- `apps/OpenSign/src/pages/Opensigndrive.jsx`
+- `apps/OpenSign/src/pages/SignyourselfPdf.jsx`
+- `apps/OpenSign/src/pages/PdfRequestFiles.jsx`
+- `apps/OpenSign/src/pages/Preferences.jsx`
+- `apps/OpenSign/src/pages/AddAdmin.jsx`
+- `apps/OpenSign/src/pages/UpdateExistUserAdmin.jsx`
+- `apps/OpenSign/src/layout/HomeLayout.jsx`
+- `apps/OpenSign/src/primitives/DownloadPdfZip.jsx`
+- `apps/OpenSign/src/primitives/RenderReportCell.jsx`
+- `apps/OpenSign/src/reports/document/DocumentsReport.jsx`
+- `apps/OpenSign/src/reports/template/TemplatesReport.jsx`

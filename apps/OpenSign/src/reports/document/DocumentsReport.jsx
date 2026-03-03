@@ -45,8 +45,7 @@ const DocumentsReport = (props) => {
   const copyUrlRef = useRef(null);
   const titleRef = useRef(null);
   const titleElement = useElSize(titleRef);
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();

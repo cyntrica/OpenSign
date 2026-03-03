@@ -2,6 +2,7 @@ import { useLocation, matchPath } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
 import { useManifestUrl } from "../hook/useManifestUrl";
+import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 
 const TITLE_MAP = {
   "/": "login",
@@ -57,9 +58,9 @@ function resolveTitle(pathname, override) {
 export default function Title() {
   const { pathname, state } = useLocation();
   const { t } = useTranslation();
-  const appName =
-    "OpenSign™";
-  const logo = useMemo(() => localStorage.getItem("favicon"), []);
+  const branding = useBranding();
+  const appName = branding.appName || "SineSeal";
+  const logo = useMemo(() => branding.faviconUrl || localStorage.getItem("favicon"), [branding.faviconUrl]);
   const prefix = useMemo(
     () => resolveTitle(pathname, state?.title),
     [pathname, state?.title]

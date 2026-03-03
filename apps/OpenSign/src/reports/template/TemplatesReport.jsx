@@ -47,8 +47,7 @@ const TemplatesReport = (props) => {
   const dispatch = useDispatch();
   const titleElement = useElSize(titleRef);
   const { prefillImg, isBulkLoader } = useSelector((state) => state.widget);
-  const appName =
-    "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();

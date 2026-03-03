@@ -29,9 +29,8 @@ const AppLoader = () => {
   );
 };
 function Opensigndrive() {
-  const appName =
-    "OpenSign™";
-  const drivename = appName === "OpenSign™" ? "OpenSign™" : "";
+  const appName = localStorage.getItem("branding_appName") || "SineSeal";
+  const drivename = appName;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const scrollRef = useRef(null);

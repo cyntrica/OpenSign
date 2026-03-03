@@ -1,52 +1,33 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router";
+import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 
 const SocialMedia = () => {
-  const { t } = useTranslation();
+  const { socialLinks, appName } = useBranding();
+
+  // Filter out links with no URL
+  const activeLinks = (socialLinks || [])
+    .filter((link) => link.url && link.url.trim())
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  if (activeLinks.length === 0) return null;
 
   return (
     <React.Fragment>
-      <NavLink
-        to="https://github.com/opensignlabs/opensign"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <i aria-hidden="true" className="fa-brands fa-github"></i>
-        <span className="fa-sr-only">
-          OpenSign&apos;s {t("social-media.github")}
-        </span>
-      </NavLink>
-      <NavLink
-        to="https://www.linkedin.com/company/opensign%E2%84%A2/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <i aria-hidden="true" className="fa-brands fa-linkedin"></i>
-        <span className="fa-sr-only">
-          OpenSign&apos;s {t("social-media.linked-in")}
-        </span>
-      </NavLink>
-      <NavLink
-        to="https://www.twitter.com/opensignlabs"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <i aria-hidden="true" className="fa-brands fa-square-x-twitter"></i>
-        <span className="fa-sr-only">
-          OpenSign&apos;s {t("social-media.twitter")}
-        </span>
-      </NavLink>
-      <NavLink
-        to="https://discord.com/invite/xe9TDuyAyj"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <i aria-hidden="true" className="fa-brands fa-discord"></i>
-        <span className="fa-sr-only">
-          OpenSign&apos;s {t("social-media.discord")}
-        </span>
-      </NavLink>
+      {activeLinks.map((link, idx) => (
+        <NavLink
+          key={`${link.title}-${idx}`}
+          to={link.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={link.title}
+        >
+          <i aria-hidden="true" className={link.icon}></i>
+          <span className="fa-sr-only">
+            {appName}&apos;s {link.title}
+          </span>
+        </NavLink>
+      ))}
     </React.Fragment>
   );
 };

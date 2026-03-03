@@ -13,7 +13,7 @@ const MailTemplateEditor = ({
   info,
   tenantId,
 }) => {
-  const appName = localStorage.getItem("appname") || "OpenSign™";
+  const appName = localStorage.getItem("branding_appName") || localStorage.getItem("appname") || "SineSeal";
   const { t } = useTranslation();
   const [requestBody, setRequestBody] = useState("");
   const [requestSubject, setRequestSubject] = useState("");

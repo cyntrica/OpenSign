@@ -1,0 +1,25 @@
+{
+  "name": "branding",
+  "namespace": "branding",
+  "version": "1.0.0",
+  "displayName": "Branding & White-Label",
+  "description": "Admin-configurable app name, logos, theme colors, social links, and footer.",
+  "backend": {
+    "entry": "backend/index.js",
+    "functions": [
+      { "name": "getSettings", "file": "backend/functions/getSettings.js" },
+      { "name": "saveSettings", "file": "backend/functions/saveSettings.js" },
+      { "name": "uploadLogo", "file": "backend/functions/uploadLogo.js" }
+    ]
+  },
+  "frontend": {
+    "adminPages": [
+      {
+        "path": "/settings/branding",
+        "component": "frontend/pages/BrandingAdmin.jsx",
+        "title": "Branding",
+        "icon": "fa-light fa-palette"
+      }
+    ]
+  }
+}
