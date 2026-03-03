@@ -1,8 +1,28 @@
 // Sign a Parse file URL with JWT so the file middleware allows access.
-// This is the same logic as presignedlocalUrl in the main server codebase,
-// kept self-contained here to avoid cross-package import path issues.
+// Uses Node.js built-in crypto (no external dependencies) to avoid
+// module resolution issues in the Docker plugin mount.
 
-import jwt from 'jsonwebtoken';
+import { createHmac } from 'node:crypto';
+
+/**
+ * Base64url encode a string or buffer.
+ */
+function base64url(data) {
+  const str = typeof data === 'string' ? Buffer.from(data) : data;
+  return str.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+/**
+ * Create a minimal HS256 JWT token (compatible with jsonwebtoken.verify).
+ */
+function jwtSign(payload, secret) {
+  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = base64url(JSON.stringify(payload));
+  const signature = base64url(
+    createHmac('sha256', secret).update(`${header}.${body}`).digest()
+  );
+  return `${header}.${body}.${signature}`;
+}
 
 /**
  * Sign a local Parse file URL with a JWT token.
@@ -28,6 +48,6 @@ export function signFileUrl(url, expirationSeconds = 3600) {
     exp: Math.floor(Date.now() / 1000) + expirationSeconds,
   };
 
-  const token = jwt.sign(payload, secretKey);
+  const token = jwtSign(payload, secretKey);
   return `${fileUrl}?token=${token}`;
 }
