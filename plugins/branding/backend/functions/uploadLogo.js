@@ -1,8 +1,10 @@
 // Cloud Function: branding_uploadLogo
 // Uploads a logo file and updates the branding settings singleton.
 // Accepts base64 file data + type ("light", "dark", "favicon", "email").
+// Returns a JWT-signed URL so the admin page can display the logo immediately.
 
 import { requireAdmin } from '../lib/requireAdmin.js';
+import { presignedlocalUrl } from '../../../../apps/OpenSignServer/cloud/parsefunction/getSignedUrl.js';
 
 const TYPE_TO_FIELD = {
   light: 'logoUrl',
@@ -59,8 +61,11 @@ export default async function uploadLogo(request) {
     settings = new Parse.Object('branding_Settings');
   }
 
+  // Store the plain (unsigned) URL in the database — getSettings signs it on read
   settings.set(field, file.url());
   await settings.save(null, { useMasterKey: true });
 
-  return { url: file.url(), field };
+  // Return a signed URL so the admin page can display the logo immediately
+  const signedUrl = presignedlocalUrl(file.url(), 3600);
+  return { url: signedUrl, field };
 }
