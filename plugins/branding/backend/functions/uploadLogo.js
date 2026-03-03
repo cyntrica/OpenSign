@@ -4,7 +4,7 @@
 // Returns a JWT-signed URL so the admin page can display the logo immediately.
 
 import { requireAdmin } from '../lib/requireAdmin.js';
-import { presignedlocalUrl } from '../../../../apps/OpenSignServer/cloud/parsefunction/getSignedUrl.js';
+import { signFileUrl } from '../lib/signFileUrl.js';
 
 const TYPE_TO_FIELD = {
   light: 'logoUrl',
@@ -66,6 +66,6 @@ export default async function uploadLogo(request) {
   await settings.save(null, { useMasterKey: true });
 
   // Return a signed URL so the admin page can display the logo immediately
-  const signedUrl = presignedlocalUrl(file.url(), 3600);
+  const signedUrl = signFileUrl(file.url(), 3600);
   return { url: signedUrl, field };
 }

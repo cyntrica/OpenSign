@@ -4,7 +4,7 @@
 // Logo URLs are signed with JWT so the file middleware allows access.
 
 import { BRANDING_DEFAULTS } from '../lib/defaults.js';
-import { presignedlocalUrl } from '../../../../apps/OpenSignServer/cloud/parsefunction/getSignedUrl.js';
+import { signFileUrl } from '../lib/signFileUrl.js';
 
 // Fields that contain file URLs needing JWT signing
 const FILE_URL_FIELDS = ['logoUrl', 'logoDarkUrl', 'faviconUrl', 'emailLogoUrl'];
@@ -17,7 +17,7 @@ function signFileUrls(data) {
   for (const field of FILE_URL_FIELDS) {
     if (signed[field] && typeof signed[field] === 'string' && signed[field].includes('files')) {
       try {
-        signed[field] = presignedlocalUrl(signed[field], SIGN_EXPIRATION);
+        signed[field] = signFileUrl(signed[field], SIGN_EXPIRATION);
       } catch (err) {
         console.warn(`[branding] Failed to sign ${field}:`, err.message);
       }
