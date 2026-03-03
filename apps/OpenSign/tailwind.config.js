@@ -2,7 +2,10 @@
 const getThemeOverrides = require("./../../plugins/_loader/tailwind-plugin-overrides.cjs");
 const pluginThemeOverrides = getThemeOverrides();
 module.exports = {
-  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+    "../../plugins/*/frontend/**/*.{js,jsx,ts,tsx}",
+  ],
   theme: {
     extend: {}
   },
