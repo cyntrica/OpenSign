@@ -9,6 +9,7 @@ import {
   saveLanguageInLocal
 } from "../constant/Utils";
 import logo from "../assets/images/logo.png";
+import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 import { appInfo } from "../constant/appinfo";
 import Parse from "parse";
 import { useTranslation } from "react-i18next";
@@ -18,6 +19,7 @@ import ModalUi from "../primitives/ModalUi";
 import Loader from "../primitives/Loader";
 
 function GuestLogin() {
+  const branding = useBranding();
   const { t, i18n } = useTranslation();
   const { id, userMail, contactBookId, base64url } = useParams();
   const navigate = useNavigate();
@@ -73,10 +75,17 @@ function GuestLogin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Update logo when branding loads from server
+  useEffect(() => {
+    if (branding.logoUrl) {
+      setAppLogo(branding.logoUrl);
+    }
+  }, [branding.logoUrl]);
+
 
   //function generate serverUrl and parseAppId from url and save it in local storage
   const handleServerUrl = async () => {
-      setAppLogo(logo);
+      setAppLogo(branding.logoUrl || logo);
     const favicon = localStorage.getItem("favicon");
 
     localStorage.clear(); // Clears everything

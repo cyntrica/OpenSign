@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import axios from "axios";
 import { NavLink, useNavigate, useLocation } from "react-router";
 import login_img from "../assets/images/login_img.svg";
+import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 import { useWindowSize } from "../hook/useWindowSize";
 import ModalUi from "../primitives/ModalUi";
 import {
@@ -24,6 +25,7 @@ import SelectLanguage from "../components/pdf/SelectLanguage";
 
 function Login() {
   const appName = localStorage.getItem("branding_appName") || "SineSeal";
+  const branding = useBranding();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,6 +51,13 @@ function Login() {
     handleUserExist();
     // eslint-disable-next-line
   }, []);
+
+  // Update logo when branding loads from server
+  useEffect(() => {
+    if (branding.logoUrl) {
+      setImage(branding.logoUrl);
+    }
+  }, [branding.logoUrl]);
 
   const handleUserExist = async () => {
       checkUserExt();
@@ -80,7 +89,10 @@ function Login() {
     ) {
       navigate("/addadmin");
     }
-    if (app?.logo) {
+    // Use branding logo if available, else fall back to getAppLogo/appInfo
+    if (branding.logoUrl) {
+      setImage(branding.logoUrl);
+    } else if (app?.logo) {
       setImage(app?.logo);
     } else {
       setImage(appInfo?.applogo || undefined);
@@ -522,8 +534,8 @@ function Login() {
                   <div className="place-self-center">
                     <div className="mx-auto md:w-[300px] lg:w-[400px] xl:w-[500px]">
                       <img
-                        src={login_img}
-                        alt="The image illustrates a person from behind, seated at a desk with a four-monitor computer setup, in an environment with a light blue and white color scheme, featuring a potted plant to the right."
+                        src={branding.loginImageUrl || login_img}
+                        alt={`${appName} login illustration`}
                         width="100%"
                       />
                     </div>

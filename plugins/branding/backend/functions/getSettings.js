@@ -7,7 +7,7 @@ import { BRANDING_DEFAULTS } from '../lib/defaults.js';
 import { signFileUrl } from '../lib/signFileUrl.js';
 
 // Fields that contain file URLs needing JWT signing
-const FILE_URL_FIELDS = ['logoUrl', 'logoDarkUrl', 'faviconUrl', 'emailLogoUrl'];
+const FILE_URL_FIELDS = ['logoUrl', 'logoDarkUrl', 'faviconUrl', 'emailLogoUrl', 'loginImageUrl'];
 
 // Sign expiration: 1 hour (branding logos are fetched on every page load)
 const SIGN_EXPIRATION = 3600;

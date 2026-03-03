@@ -15,6 +15,7 @@ export async function setup({ Parse, config }) {
     schema.addString('footerText');
     schema.addString('footerUrl');
     schema.addString('emailLogoUrl');
+    schema.addString('loginImageUrl');
     schema.addArray('socialLinks');
     schema.addObject('themeLight');
     schema.addObject('themeDark');

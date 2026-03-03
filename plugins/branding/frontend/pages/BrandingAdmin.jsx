@@ -29,6 +29,7 @@ const DEFAULT_FORM = {
   footerText: "",
   footerUrl: "",
   emailLogoUrl: "",
+  loginImageUrl: "",
   socialLinks: [],
   themeLight: {},
   themeDark: {},
@@ -79,6 +80,7 @@ export default function BrandingAdmin() {
           footerText: result.footerText || "",
           footerUrl: result.footerUrl || "",
           emailLogoUrl: result.emailLogoUrl || "",
+          loginImageUrl: result.loginImageUrl || "",
           socialLinks: Array.isArray(result.socialLinks)
             ? result.socialLinks
             : [],
@@ -143,7 +145,7 @@ export default function BrandingAdmin() {
       );
 
       // Update form with new URL
-      const fieldMap = { light: "logoUrl", dark: "logoDarkUrl", favicon: "faviconUrl", email: "emailLogoUrl" };
+      const fieldMap = { light: "logoUrl", dark: "logoDarkUrl", favicon: "faviconUrl", email: "emailLogoUrl", loginImage: "loginImageUrl" };
       setForm((f) => ({ ...f, [fieldMap[type]]: result.url }));
       setSuccess(`${type} logo uploaded.`);
     } catch (err) {
@@ -366,6 +368,13 @@ function LogoTab({ form, updateForm, handleUpload, uploading }) {
       field: "faviconUrl",
       accept: "image/png,image/x-icon,image/vnd.microsoft.icon",
       desc: "Browser tab icon (recommended: 32x32 or 64x64 PNG).",
+    },
+    {
+      type: "loginImage",
+      label: "Login Illustration",
+      field: "loginImageUrl",
+      accept: "image/png,image/jpeg,image/svg+xml",
+      desc: "Right-side illustration on the login page.",
     },
   ];
 

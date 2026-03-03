@@ -41,7 +41,7 @@ export default async function saveSettings(request) {
   // Set all fields
   const fields = [
     'appName', 'logoUrl', 'logoDarkUrl', 'faviconUrl',
-    'footerText', 'footerUrl', 'emailLogoUrl',
+    'footerText', 'footerUrl', 'emailLogoUrl', 'loginImageUrl',
     'socialLinks', 'themeLight', 'themeDark',
   ];
   for (const field of fields) {

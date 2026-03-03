@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import login_img from "../assets/images/login_img.svg";
+import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 import Parse from "parse";
 import Alert from "../primitives/Alert";
 import { appInfo } from "../constant/appinfo";
@@ -13,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import Loader from "../primitives/Loader";
 
 function ForgotPassword() {
+  const branding = useBranding();
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -71,13 +73,20 @@ function ForgotPassword() {
     return () => window.removeEventListener("resize", resize);
     // eslint-disable-next-line
   }, []);
+
+  // Update logo when branding loads from server
+  useEffect(() => {
+    if (branding.logoUrl) {
+      setImage(branding.logoUrl);
+    }
+  }, [branding.logoUrl]);
   const saveLogo = async () => {
     try {
       await Parse.User.logOut();
     } catch (err) {
       console.log("err while logging out ", err);
     }
-      setImage(appInfo?.applogo || undefined);
+      setImage(branding.logoUrl || appInfo?.applogo || undefined);
   };
   return (
     <div>
@@ -139,7 +148,7 @@ function ForgotPassword() {
             {!state.hideNav && (
               <div className="self-center">
                 <div className="mx-auto md:w-[300px] lg:w-[500px]">
-                  <img src={login_img} alt="bisec" width="100%" />
+                  <img src={branding.loginImageUrl || login_img} alt="illustration" width="100%" />
                 </div>
               </div>
             )}

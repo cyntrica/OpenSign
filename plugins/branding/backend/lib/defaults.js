@@ -7,6 +7,7 @@ export const BRANDING_DEFAULTS = {
   footerText: '',
   footerUrl: '',
   emailLogoUrl: '',
+  loginImageUrl: '',
   socialLinks: [
     { icon: 'fa-brands fa-github', title: 'GitHub', url: '', sortOrder: 0 },
     { icon: 'fa-brands fa-linkedin', title: 'LinkedIn', url: '', sortOrder: 1 },
