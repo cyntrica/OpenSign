@@ -80,6 +80,14 @@ export default async function declinedocument(request) {
         throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'You are not authorized to decline this document.');
       }
 
+      // Block declining documents already in a terminal state
+      if (_doc.IsCompleted) {
+        throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Cannot decline a completed document.');
+      }
+      if (_doc.IsArchive) {
+        throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Cannot decline an archived document.');
+      }
+
       const isEnableOTP = updateDoc?.get('IsEnableOTP') || false;
       if (!isEnableOTP) {
         updateDoc.set('IsDeclined', true);

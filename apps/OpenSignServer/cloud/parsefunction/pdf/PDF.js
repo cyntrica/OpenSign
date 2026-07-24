@@ -95,8 +95,10 @@ async function updateDoc(docId, url, userId, ipAddress, data, className, sign, d
     if (data.Signers && data.Signers.length > 0) {
       //'removePrefill' is used to remove prefill role from placeholders filed then compare length to change status of document
       const removePrefill =
-        data.Placeholders.length > 0 && data.Placeholders.filter(x => x.Role !== 'prefill');
-      if (auditTrail.length === removePrefill?.length) {
+        data.Placeholders.length > 0 ? data.Placeholders.filter(x => x.Role !== 'prefill') : [];
+      // Complete only when every non-prefill placeholder is signed. `>=` guards against
+      // audit-trail drift; `length > 0` prevents a zero-placeholder doc auto-completing.
+      if (removePrefill.length > 0 && auditTrail.length >= removePrefill.length) {
         isCompleted = true;
       }
     } else {
@@ -380,6 +382,13 @@ async function PDF(req) {
     if (!resDoc) {
       throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'Document not found.');
     }
+    // Block signing documents already in a terminal state
+    if (resDoc.get('IsDeclined')) {
+      throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'This document has been declined and can no longer be signed.');
+    }
+    if (resDoc.get('IsArchive')) {
+      throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'This document has been archived and can no longer be signed.');
+    }
     const IsEnableOTP = resDoc?.get('IsEnableOTP') || false;
     // if `IsEnableOTP` is false then we don't have to check authentication
     if (IsEnableOTP) {
@@ -431,10 +440,10 @@ async function PDF(req) {
       let isCompleted = false;
       if (_resDoc.Signers && _resDoc.Signers.length > 0) {
         const removePrefill =
-          _resDoc?.Placeholders?.length > 0 &&
-          _resDoc?.Placeholders?.filter(x => x?.Role !== 'prefill');
-        if (auditTrail.length === removePrefill?.length) {
-          // if (auditTrail.length === _resDoc.Signers.length) {
+          _resDoc?.Placeholders?.length > 0
+            ? _resDoc?.Placeholders?.filter(x => x?.Role !== 'prefill')
+            : [];
+        if (removePrefill.length > 0 && auditTrail.length >= removePrefill.length) {
           isCompleted = true;
         }
       } else {
