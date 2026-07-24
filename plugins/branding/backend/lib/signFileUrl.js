@@ -30,16 +30,20 @@ function jwtSign(payload, secret) {
  * @param {number} [expirationSeconds=3600] - Token expiry in seconds (default 1 hour)
  * @returns {string} The URL with ?token=... appended
  */
+// Uses dedicated FILE_SIGNING_SECRET if set, falls back to MASTER_KEY.
+// In production, set FILE_SIGNING_SECRET to a separate random secret.
+const FILE_SIGNING_SECRET = process.env.FILE_SIGNING_SECRET || process.env.MASTER_KEY;
+
 export function signFileUrl(url, expirationSeconds = 3600) {
   if (!url || typeof url !== 'string' || !url.includes('files')) {
     return url;
   }
 
   const fileUrl = url.split('?')[0]; // Strip any existing query params
-  const secretKey = process.env.MASTER_KEY;
+  const secretKey = FILE_SIGNING_SECRET;
 
   if (!secretKey) {
-    console.warn('[branding] MASTER_KEY not set — cannot sign file URL');
+    console.warn('[branding] FILE_SIGNING_SECRET / MASTER_KEY not set — cannot sign file URL');
     return url;
   }
 

@@ -2,12 +2,6 @@ import { MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, MAX_NOTE_LENGTH } from '../../
 import { setDocumentCount } from '../../utils/CountUtils.js';
 
 async function DocumentBeforesave(request) {
-  // Plugin hook: check limits on new document creation
-  if (!request.original && globalThis.__pluginHooks?.runHooks) {
-    await globalThis.__pluginHooks.runHooks('beforeDocumentSave', {
-      request, object: request.object, user: request.user,
-    });
-  }
   if (!request.original) {
     const validations = [
       { field: 'Name', max: MAX_NAME_LENGTH },
@@ -31,6 +25,13 @@ async function DocumentBeforesave(request) {
     const reminderCount = TimeToCompleteDays / RemindOnceInEvery;
     if (AutoReminder && reminderCount > 15) {
       throw new Parse.Error(Parse.Error.INVALID_QUERY, 'only 15 reminder allowed');
+    }
+
+    // Plugin hook: check limits on new document creation (runs after validation)
+    if (globalThis.__pluginHooks?.runHooks) {
+      await globalThis.__pluginHooks.runHooks('beforeDocumentSave', {
+        request, object: request.object, user: request.user,
+      });
     }
   }
   try {

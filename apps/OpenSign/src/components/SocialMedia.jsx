@@ -1,13 +1,13 @@
 import React from "react";
-import { NavLink } from "react-router";
 import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 
 const SocialMedia = () => {
   const { socialLinks, appName } = useBranding();
 
-  // Filter out links with no URL
+  // Filter out links with no URL and reject non-http(s) schemes (e.g. javascript:)
   const activeLinks = (socialLinks || [])
     .filter((link) => link.url && link.url.trim())
+    .filter((link) => /^https?:\/\//i.test(link.url))
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   if (activeLinks.length === 0) return null;
@@ -15,9 +15,9 @@ const SocialMedia = () => {
   return (
     <React.Fragment>
       {activeLinks.map((link, idx) => (
-        <NavLink
+        <a
           key={`${link.title}-${idx}`}
-          to={link.url}
+          href={link.url}
           target="_blank"
           rel="noopener noreferrer"
           title={link.title}
@@ -26,7 +26,7 @@ const SocialMedia = () => {
           <span className="fa-sr-only">
             {appName}&apos;s {link.title}
           </span>
-        </NavLink>
+        </a>
       ))}
     </React.Fragment>
   );

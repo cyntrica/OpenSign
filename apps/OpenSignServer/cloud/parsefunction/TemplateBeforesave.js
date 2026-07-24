@@ -28,6 +28,9 @@ async function TemplateBeforeSave(request) {
     const TimeToCompleteDays = request.object.get('TimeToCompleteDays') || 15;
     const RemindOnceInEvery = request?.object?.get('RemindOnceInEvery') || 5;
     const AutoReminder = request?.object?.get('AutomaticReminders') || false;
+    if (RemindOnceInEvery <= 0) {
+      throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Reminder interval must be greater than 0.');
+    }
     const reminderCount = TimeToCompleteDays / RemindOnceInEvery;
     if (AutoReminder && reminderCount > 15) {
       throw new Parse.Error(Parse.Error.INVALID_QUERY, 'only 15 reminder allowed');

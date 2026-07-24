@@ -45,6 +45,13 @@ export default async function usersignup(request) {
   const userDetails = request.params.userDetails;
 
   try {
+    // Validate role prefix to prevent class name injection
+    const ALLOWED_ROLE_PREFIXES = ['contracts'];
+    const rolePrefix = userDetails.role?.split('_')[0];
+    if (!ALLOWED_ROLE_PREFIXES.includes(rolePrefix)) {
+      throw new Parse.Error(Parse.Error.VALIDATION_ERROR, `Invalid role: ${userDetails.role}`);
+    }
+
     const user = await saveUser(userDetails);
     const extClass = userDetails.role.split('_')[0];
 
@@ -133,6 +140,7 @@ export default async function usersignup(request) {
       return { message: 'User sign up', sessionToken: user.sessionToken };
     }
   } catch (err) {
-    console.log('Err ', err);
+    console.error('[usersignup] Error:', err.message || err);
+    throw err;  // Let the client know signup failed
   }
 }

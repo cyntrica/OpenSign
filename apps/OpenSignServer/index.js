@@ -13,7 +13,7 @@ import S3Adapter from '@parse/s3-files-adapter';
 import FSFilesAdapter from '@parse/fs-files-adapter';
 import AWS from 'aws-sdk';
 import { app as customRoute } from './cloud/customRoute/customApp.js';
-import { exec } from 'child_process';
+import { spawn } from 'node:child_process';
 import { createTransport } from 'nodemailer';
 import { appName, cloudServerUrl, serverAppId, smtpenable, smtpsecure, useLocal } from './Utils.js';
 import { SSOAuth } from './auth/authadapter.js';
@@ -110,7 +110,7 @@ export const config = {
   maxLimit: 500,
   maxUploadSize: '100mb',
   masterKey: process.env.MASTER_KEY, //Add your master key here. Keep it secret!
-  masterKeyIps: ['0.0.0.0/0', '::/0'], // '::1'
+  masterKeyIps: ['0.0.0.0/0', '::/0'], // TODO: Restrict to Docker network in production
   serverURL: cloudServerUrl, // Don't forget to change to https if needed
   verifyUserEmails: false,
   publicServerURL: process.env.SERVER_URL || cloudServerUrl,
@@ -165,11 +165,13 @@ export const config = {
 // javascriptKey, restAPIKey, dotNetKey, clientKey
 
 export const app = express();
+// Trust first proxy (Caddy reverse proxy) for accurate req.ip
+app.set('trust proxy', 1);
 globalThis.__pluginExpressApp = app; // Expose for plugin route registration
 app.use(cors());
 app.use(express.json({
   limit: '100mb',
-  verify: (req, res, buf) => { if (req.url?.startsWith('/plugins/')) req.rawBody = buf; }
+  verify: (req, res, buf) => { if (req.url?.startsWith('/plugins/membership/stripe/webhook')) req.rawBody = buf; }
 }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(function (req, res, next) {
@@ -243,23 +245,17 @@ if (!process.env.TESTING) {
   httpServer.headersTimeout = 100000; // in milliseconds
   httpServer.listen(port, '0.0.0.0', function () {
     console.log('opensign-server running on port ' + port + '.');
-    const isWindows = process.platform === 'win32';
-    // console.log('isWindows', isWindows);
     runDbMigrations();
-    const migrate = isWindows
-      ? `set APPLICATION_ID=${serverAppId}&& set SERVER_URL=${cloudServerUrl}&& set MASTER_KEY=${process.env.MASTER_KEY}&& npx parse-dbtool migrate`
-      : `APPLICATION_ID=${serverAppId} SERVER_URL=${cloudServerUrl} MASTER_KEY=${process.env.MASTER_KEY} npx parse-dbtool migrate`;
-    exec(migrate, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error: ${error.message}`);
-        return;
-      }
-
-      if (stderr) {
-        console.error(`Error: ${stderr}`);
-        return;
-      }
-      console.log(`Command output: ${stdout}`);
+    // SECURITY: Use spawn() instead of exec() to avoid shell command injection
+    // via interpolated env vars. spawn() passes args as an array, not a shell string.
+    const migrateChild = spawn('npx', ['parse-dbtool', 'migrate'], {
+      env: { ...process.env, APPLICATION_ID: serverAppId, SERVER_URL: cloudServerUrl, MASTER_KEY: process.env.MASTER_KEY },
+      stdio: 'pipe',
+    });
+    migrateChild.stdout.on('data', (data) => console.log(`[migrate] ${data}`));
+    migrateChild.stderr.on('data', (data) => console.error(`[migrate] ${data}`));
+    migrateChild.on('close', (code) => {
+      if (code !== 0) console.error(`[migrate] exited with code ${code}`);
     });
   });
 }

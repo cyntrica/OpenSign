@@ -12,10 +12,21 @@ const FILE_URL_FIELDS = ['logoUrl', 'logoDarkUrl', 'faviconUrl', 'emailLogoUrl',
 // Sign expiration: 1 hour (branding logos are fetched on every page load)
 const SIGN_EXPIRATION = 3600;
 
+// More specific check for Parse Server file URLs (Finding #40)
+const isParseFile = (url) => {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname.includes('/files/');
+  } catch {
+    return url.includes('/files/');
+  }
+};
+
 function signFileUrls(data) {
   const signed = { ...data };
   for (const field of FILE_URL_FIELDS) {
-    if (signed[field] && typeof signed[field] === 'string' && signed[field].includes('files')) {
+    if (signed[field] && typeof signed[field] === 'string' && isParseFile(signed[field])) {
       try {
         signed[field] = signFileUrl(signed[field], SIGN_EXPIRATION);
       } catch (err) {

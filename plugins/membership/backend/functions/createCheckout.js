@@ -41,6 +41,12 @@ export default async function createCheckout(request) {
     __type: 'Pointer', className: 'partners_Tenant', objectId: tenantId,
   });
   const subscription = await subQuery.first({ useMasterKey: true });
+  // Verify the subscription belongs to this user's tenant
+  const subTenantId = subscription?.get('TenantId')?.id;
+  if (subTenantId && subTenantId !== tenantId) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Subscription does not belong to your organization.');
+  }
+
   let stripeCustomerId = subscription?.get('stripeCustomerId');
 
   // Create Stripe customer if needed
@@ -60,7 +66,10 @@ export default async function createCheckout(request) {
   }
 
   // Create Checkout Session
-  const publicUrl = process.env.PUBLIC_URL || `https://${request.headers?.host || 'localhost'}`;
+  const publicUrl = process.env.PUBLIC_URL;
+  if (!publicUrl) {
+    throw new Parse.Error(Parse.Error.INTERNAL_SERVER_ERROR, 'PUBLIC_URL environment variable is required for checkout.');
+  }
   const session = await stripe.checkout.sessions.create({
     customer: stripeCustomerId,
     mode: 'subscription',

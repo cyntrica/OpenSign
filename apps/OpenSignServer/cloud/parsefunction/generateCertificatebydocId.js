@@ -5,10 +5,10 @@ import { PDFDocument } from 'pdf-lib';
 import fs from 'node:fs';
 import dotenv from 'dotenv';
 import GenerateCertificate from './pdf/GenerateCertificate.js';
-import { getSecureUrl } from '../../Utils.js';
+import { getSecureUrl, appName } from '../../Utils.js';
 import { parseUploadFile } from '../../utils/fileUtils.js';
 dotenv.config({ quiet: true });
-const eSignName = 'OpenSign';
+const getESignName = () => appName.replace(/[™®©]/g, '');
 const eSigncontact = 'hello@opensignlabs.com';
 
 // `uploadFile` is used to create url in from pdfFile
@@ -26,9 +26,10 @@ async function uploadFile(pdfName, filepath) {
     fileUrl = getSecureUrl(fileRes?.url)?.url;
     return { imageUrl: fileUrl };
   } catch (err) {
-    console.log('Err ', err);
+    console.error('[certificate] uploadFile error:', err.message);
     // `unlinkCertificate` is used to remove exported certificate file from exports folder
     unlinkCertificate(filepath);
+    throw new Error(`Failed to upload certificate file: ${err.message}`);
   }
 }
 
@@ -66,7 +67,7 @@ export default async function generateCertificatebydocId(req) {
       const filteredaudit = _docRes?.AuditTrail?.filter(x => x?.UserPtr?.objectId);
       // Create a reversed copy of the array and find the last object with 'signedOn'
       const lastObj = [...filteredaudit].reverse().find(obj => obj.hasOwnProperty('SignedOn'));
-      const completedAt = lastObj.SignedOn;
+      const completedAt = lastObj?.SignedOn || new Date().toISOString();
       const doc = { ..._docRes, completedAt: completedAt };
       const certificate = await GenerateCertificate(doc);
       const certificatePdf = await PDFDocument.load(certificate);
@@ -74,9 +75,9 @@ export default async function generateCertificatebydocId(req) {
       //  `pdflibAddPlaceholder` is used to add code of only digital sign in certificate
       pdflibAddPlaceholder({
         pdfDoc: certificatePdf,
-        reason: `Digitally signed by ${eSignName}.`,
+        reason: `Digitally signed by ${getESignName()}.`,
         location: 'n/a',
-        name: eSignName,
+        name: getESignName(),
         contactInfo: eSigncontact,
         signatureLength: 16000,
       });

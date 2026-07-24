@@ -1,22 +1,9 @@
 // Cloud Function: membership_savePlan
 // Creates or updates a membership plan (admin-only)
-
-async function requireAdmin(user) {
-  if (!user) {
-    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User not authenticated.');
-  }
-  const extQuery = new Parse.Query('contracts_Users');
-  extQuery.equalTo('UserId', user.toPointer());
-  extQuery.select('UserRole');
-  const extUser = await extQuery.first({ useMasterKey: true });
-  const role = extUser?.get('UserRole');
-  if (role !== 'contracts_Admin' && role !== 'contracts_OrgAdmin') {
-    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Admin access required.');
-  }
-}
+import requireAdmin from '../lib/requireAdmin.js';
 
 export default async function savePlan(request) {
-  await requireAdmin(request.user);
+  await requireAdmin(request);
 
   const {
     objectId, name, slug, limits, price, currency,
@@ -26,6 +13,14 @@ export default async function savePlan(request) {
   // Validate required fields
   if (!name || !slug || !limits) {
     throw new Parse.Error(Parse.Error.INVALID_QUERY, 'name, slug, and limits are required.');
+  }
+
+  // Validate slug: lowercase alphanumeric + hyphens only
+  if (!/^[a-z0-9-]+$/.test(slug)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Plan slug must contain only lowercase letters, numbers, and hyphens.');
+  }
+  if (slug.length > 50) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Plan slug must be at most 50 characters.');
   }
 
   // Validate limits object

@@ -23,6 +23,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
   const { width } = useWindowSize();
   const dispatch = useDispatch();
   const branding = useBranding();
+  const docsUrl = branding.docsUrl || "https://docs.opensignlabs.com";
   const username = localStorage.getItem("username") || "";
   const image = localStorage.getItem("profileImg") || dp;
   const [isOpen, setIsOpen] = useState(false);
@@ -151,7 +152,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                 className="object-contain h-full w-auto"
                 src={
                       isDarkTheme
-                      ? (branding.logoDarkUrl || "/static/js/assets/images/logo-dark.png")
+                      ? (branding.logoDarkUrl || branding.logoUrl || applogo)
                       : (branding.logoUrl || applogo)
                 }
                 alt="logo"
@@ -207,7 +208,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                 <>
                     <li
                       onClick={() =>
-                        openInNewTab("https://docs.opensignlabs.com")
+                        openInNewTab(docsUrl)
                       }
                     >
                       <span>

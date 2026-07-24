@@ -146,6 +146,9 @@ import * as Utils from '../Utils.js';
 // Make runHooks available globally for instrumented core functions (e.g. PDF.js)
 globalThis.__pluginHooks = { runHooks };
 
-loadPlugins(Utils).catch(err => {
-  console.error('[plugins] Fatal error loading plugins:', err);
+loadPlugins(Utils).then(() => {
+  delete globalThis.__pluginExpressApp;
+  // __pluginHooks must remain for runtime hook dispatch
+}).catch(err => {
+  console.error('[plugins] Plugin loading error (server continuing without full plugin support):', err);
 });

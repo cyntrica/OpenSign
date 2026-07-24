@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import Parse from "parse";
 import { appInfo } from "../constant/appinfo";
-import { NavLink, useNavigate } from "react-router";
+import { NavLink, useNavigate, Link } from "react-router";
 import {
   getAppLogo,
-  openInNewTab,
   saveLanguageInLocal,
   usertimezone
 } from "../constant/Utils";
@@ -435,36 +434,32 @@ const AddAdmin = () => {
                         </p>
                       </div>
                     )}
-                    <div className="mt-2.5 ml-1 flex flex-row items-center">
+                    <div className="mt-2.5 ml-1 flex flex-row items-start gap-2">
                       <input
                         type="checkbox"
-                        className="op-checkbox op-checkbox-sm"
+                        className="op-checkbox op-checkbox-sm mt-0.5"
                         id="termsandcondition"
                         checked={isAuthorize}
                         onChange={(e) => setIsAuthorize(e.target.checked)}
                         onInvalid={(e) =>
-                          e.target.setCustomValidity(t("input-required"))
+                          e.target.setCustomValidity("You must accept the Terms & Conditions and Privacy Policy.")
                         }
                         onInput={(e) => e.target.setCustomValidity("")}
                         required
                       />
                       <label
-                        className="text-xs cursor-pointer ml-1 mb-0"
+                        className="text-xs cursor-pointer mb-0 leading-relaxed"
                         htmlFor="termsandcondition"
                       >
-                        {t("agreee")}
+                        I agree to the{" "}
+                        <Link to="/tc" target="_blank" className="op-link op-link-primary underline-offset-2">
+                          Terms &amp; Conditions
+                        </Link>{" "}
+                        and{" "}
+                        <Link to="/privacy" target="_blank" className="op-link op-link-primary underline-offset-2">
+                          Privacy Policy
+                        </Link>.
                       </label>
-                      <span
-                        className="underline cursor-pointer ml-1"
-                        onClick={() =>
-                          openInNewTab(
-                            "https://www.opensignlabs.com/terms-and-conditions"
-                          )
-                        }
-                      >
-                        {t("term")}
-                      </span>
-                      <span>.</span>
                     </div>
                     <div className="mt-2.5 ml-1 flex flex-row items-center">
                       <input

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router";
 import Package from "../../package.json";
 import axios from "axios";
 import { openInNewTab } from "../constant/Utils";
@@ -42,7 +43,7 @@ const Footer = () => {
   }, []);
 
   const openUrl = () => {
-    if (footerUrl) {
+    if (footerUrl && /^https?:\/\//i.test(footerUrl)) {
       openInNewTab(footerUrl);
     }
   };
@@ -66,6 +67,11 @@ const Footer = () => {
                 ({t("version")}: {version || Package.version})
               </span>
             )}
+          </p>
+          <p className="mt-1 text-base-content/50">
+            <Link to="/privacy" className="hover:underline cursor-pointer">Privacy Policy</Link>
+            {" | "}
+            <Link to="/tc" className="hover:underline cursor-pointer">Terms &amp; Conditions</Link>
           </p>
         </aside>
       </footer>

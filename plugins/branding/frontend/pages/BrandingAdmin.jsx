@@ -21,6 +21,8 @@ const THEME_TOKENS = [
   { key: "error", label: "Error" },
 ];
 
+// Default values: authoritative source is plugins/branding/backend/lib/defaults.js
+// These must be kept in sync if changed.
 const DEFAULT_FORM = {
   appName: "SineSeal",
   logoUrl: "",
@@ -45,7 +47,9 @@ export default function BrandingAdmin() {
   const [form, setForm] = useState({ ...DEFAULT_FORM });
   const [uploading, setUploading] = useState(null);
 
-  // Admin role check
+  // NOTE: This client-side role check is for UI gating only.
+  // All mutations are enforced server-side by requireAdmin().
+  // A user who modifies localStorage can see this page but cannot save changes.
   useEffect(() => {
     try {
       const extClass = JSON.parse(

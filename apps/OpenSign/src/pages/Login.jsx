@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Parse from "parse";
 import { useDispatch } from "react-redux";
 import axios from "axios";
-import { NavLink, useNavigate, useLocation } from "react-router";
+import { NavLink, useNavigate, useLocation, Link } from "react-router";
 import login_img from "../assets/images/login_img.svg";
 import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 import { useWindowSize } from "../hook/useWindowSize";
@@ -528,6 +528,18 @@ function Login() {
                         {state.loading ? t("loading") : t("login")}
                       </button>
                     </div>
+                    <p className="text-xs text-center mt-3 text-base-content/60">
+                      Don&apos;t have an account?{" "}
+                      <NavLink to="/signup" className="op-link op-link-primary underline-offset-2 font-semibold">
+                        Create Account
+                      </NavLink>
+                    </p>
+                    <p className="text-[11px] text-center mt-2 text-base-content/40 leading-relaxed">
+                      By using {appName}, you agree to our{" "}
+                      <Link to="/tc" target="_blank" className="underline hover:text-base-content/60">Terms &amp; Conditions</Link>
+                      {" "}and{" "}
+                      <Link to="/privacy" target="_blank" className="underline hover:text-base-content/60">Privacy Policy</Link>.
+                    </p>
                   </form>
                 </div>
                 {width >= 768 && (

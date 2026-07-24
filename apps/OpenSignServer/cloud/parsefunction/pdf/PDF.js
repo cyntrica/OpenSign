@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import axios from 'axios';
 import { PDFDocument } from 'pdf-lib';
 import {
@@ -8,6 +8,8 @@ import {
   saveFileUsage,
   getSecureUrl,
   appName,
+  emailLogoUrl,
+  escapeHtml,
   serverAppId,
 } from '../../../Utils.js';
 import GenerateCertificate from './GenerateCertificate.js';
@@ -20,7 +22,8 @@ import { buildDownloadFilename, parseUploadFile } from '../../../utils/fileUtils
 const serverUrl = cloudServerUrl; // process.env.SERVER_URL;
 const APPID = serverAppId;
 const masterKEY = process.env.MASTER_KEY;
-const eSignName = 'OpenSign';
+// Computed at call-time so it picks up the branded appName after server init
+const getESignName = () => appName.replace(/[™®©]/g, '');
 const eSigncontact = 'hello@opensignlabs.com';
 const docUrl = `${serverUrl}/classes/contracts_Document`;
 const headers = {
@@ -121,7 +124,7 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
   try {
     const TenantAppName = appName;
     const logo =
-      "<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>";
+      `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
     const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
     const auditTrailCount = doc?.AuditTrail?.filter(x => x.Activity === 'Signed')?.length || 0;
     const removePrefill =
@@ -139,10 +142,10 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
       const subject = `Document "${pdfName}" has been signed by ${signerName}`;
       const body =
         "<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'>" +
-        `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#47a3ad'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document signed by ${signerName}</p>` +
-        `</div><div style='padding:20px;font-family:system-ui;font-size:14px'><p>Dear ${creatorName},</p><p>${pdfName} has been signed by ${signerName} "${signerEmail}" successfully</p>` +
-        `<p><a href=${viewDocUrl} target=_blank>View Document</a></p></div></div><div><p>This is an automated email from ${TenantAppName}. For any queries regarding this email, ` +
-        `please contact the sender ${creatorEmail} directly. If you think this email is inappropriate or spam, you may file a complaints with ${TenantAppName}${opurl}.</p></div></div></body></html>`;
+        `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#47a3ad'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document signed by ${escapeHtml(signerName)}</p>` +
+        `</div><div style='padding:20px;font-family:system-ui;font-size:14px'><p>Dear ${escapeHtml(creatorName)},</p><p>${escapeHtml(pdfName)} has been signed by ${escapeHtml(signerName)} "${escapeHtml(signerEmail)}" successfully</p>` +
+        `<p><a href=${viewDocUrl} target=_blank>View Document</a></p></div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, ` +
+        `please contact the sender ${escapeHtml(creatorEmail)} directly. If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`;
 
       const params = {
         extUserId: sender.objectId,
@@ -168,7 +171,7 @@ async function sendCompletedMail(obj) {
   const pdfName = doc.Name;
   const TenantAppName = appName;
   const logo =
-    "<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>";
+    `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
   const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
   let signersMail;
   if (doc?.Signers?.length > 0) {
@@ -184,9 +187,9 @@ async function sendCompletedMail(obj) {
   let body =
     "<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'>" +
     `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#47a3ad'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document signed successfully</p></div><div>` +
-    `<p style='padding:20px;font-family:system-ui;font-size:14px'>All parties have successfully signed the document <b>"${pdfName}"</b>. Kindly download the document from the attachment.</p>` +
-    `</div></div><div><p>This is an automated email from ${TenantAppName}. For any queries regarding this email, please contact the sender ${sender.Email} directly.` +
-    `If you think this email is inappropriate or spam, you may file a complaints with ${TenantAppName}${opurl}.</p></div></div></body></html>`;
+    `<p style='padding:20px;font-family:system-ui;font-size:14px'>All parties have successfully signed the document <b>"${escapeHtml(pdfName)}"</b>. Kindly download the document from the attachment.</p>` +
+    `</div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, please contact the sender ${escapeHtml(sender.Email)} directly.` +
+    `If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`;
 
   if (obj?.isCustomMail) {
     const tenant = sender?.TenantId;
@@ -206,8 +209,8 @@ async function sendCompletedMail(obj) {
           const tenantRes = await tenantQuery.first({ useMasterKey: true });
           if (tenantRes) {
             const _tenantRes = JSON.parse(JSON.stringify(tenantRes));
-            subject = _tenantRes?.CompletionSubject ? tenant?.CompletionSubject : subject;
-            body = _tenantRes?.CompletionBody ? tenant?.CompletionBody : body;
+            subject = _tenantRes?.CompletionSubject ? _tenantRes?.CompletionSubject : subject;
+            body = _tenantRes?.CompletionBody ? _tenantRes?.CompletionBody : body;
           }
         } catch (err) {
           console.log('error in fetch tenant in signpdf', err.message);
@@ -280,9 +283,9 @@ async function sendMailsaveCertifcate(doc, pfx, isCustomMail, mailProvider, file
   //  `pdflibAddPlaceholder` is used to add code of only digitial sign in certificate
   pdflibAddPlaceholder({
     pdfDoc: certificatePdf,
-    reason: `Digitally signed by ${eSignName}.`,
+    reason: `Digitally signed by ${getESignName()}.`,
     location: 'n/a',
-    name: eSignName,
+    name: getESignName(),
     contactInfo: eSigncontact,
     signatureLength: 16000,
   });
@@ -334,9 +337,9 @@ async function processPdf(_resDoc, PdfBuffer, reason) {
   form.flatten();
   Placeholder({
     pdfDoc: pdfDoc,
-    reason: `Digitally signed by ${eSignName} for ${reason}`,
+    reason: `Digitally signed by ${getESignName()} for ${reason}`,
     location: 'n/a',
-    name: eSignName,
+    name: getESignName(),
     contactInfo: eSigncontact,
     signatureLength: 16000,
   });
@@ -351,8 +354,8 @@ async function processPdf(_resDoc, PdfBuffer, reason) {
  */
 async function PDF(req) {
   const docId = req.params.docId;
-  const randomNumber = Math.floor(Math.random() * 5000);
-  const pfxname = `keystore_${randomNumber}.pfx`;
+  const pfxname = `keystore_${randomUUID()}.pfx`;
+  let signedFilePath = null;
   try {
     // ─── Plugin hook: beforeSign ───
     // Plugins can inspect/modify payload or throw to abort signing.
@@ -440,9 +443,9 @@ async function PDF(req) {
       // below regex is used to replace all word with "_" except A to Z, a to z, numbers
       const docName = _resDoc?.Name?.replace(/[^a-zA-Z0-9._-]/g, '_')?.toLowerCase();
       const filename = docName?.length > 100 ? docName?.slice(0, 100) : docName;
-      const name = `${filename}_${randomNumber}.pdf`;
+      const name = `${filename}_${randomUUID()}.pdf`;
       let filePath = `./exports/${name}`;
-      let signedFilePath = `./exports/signed_${name}`;
+      signedFilePath = `./exports/signed_${name}`;
       let pdfSize = PdfBuffer.length;
       let documentHash;
       if (isCompleted) {
@@ -486,7 +489,7 @@ async function PDF(req) {
           sign, // sign base64
           isCompleted ? documentHash : undefined
         );
-        sendNotifyMail(_resDoc, signUser, mailProvider, publicUrl);
+        sendNotifyMail(_resDoc, signUser, mailProvider, publicUrl).catch(err => console.error('[PDF] sendNotifyMail error:', err.message));
         saveFileUsage(pdfSize, data.imageUrl, _resDoc?.CreatedBy?.objectId);
         if (updatedDoc && updatedDoc.isCompleted) {
           const hashForDoc = documentHash || updatedDoc?.DocumentHash;
@@ -494,7 +497,7 @@ async function PDF(req) {
           if (hashForDoc) {
             doc.DocumentHash = hashForDoc;
           }
-          sendMailsaveCertifcate(doc, pfx, isCustomMail, mailProvider, `signed_${name}`);
+          sendMailsaveCertifcate(doc, pfx, isCustomMail, mailProvider, `signed_${name}`).catch(err => console.error('[PDF] sendMailsaveCertifcate error:', err.message));
         } else {
           unlinkFile(pfxname);
         }
@@ -532,6 +535,7 @@ async function PDF(req) {
       console.log('err in saving debugginglog', err);
     }
     unlinkFile(pfxname);
+    if (signedFilePath) unlinkFile(signedFilePath);
     throw err;
   }
 }

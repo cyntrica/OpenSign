@@ -25,6 +25,27 @@ export default async function stripeWebhook(req, res) {
     return res.status(400).json({ error: `Webhook Error: ${err.message}` });
   }
 
+  // Idempotency: track processed event IDs to prevent duplicate processing
+  const eventId = event.id;
+  const existingEvent = await new Parse.Query('membership_WebhookEvent')
+    .equalTo('eventId', eventId)
+    .first({ useMasterKey: true })
+    .catch(() => null);
+
+  if (existingEvent) {
+    console.log(`[membership] Webhook event ${eventId} already processed, skipping`);
+    return res.status(200).json({ received: true, duplicate: true });
+  }
+
+  // Record the event before processing
+  const eventRecord = new Parse.Object('membership_WebhookEvent');
+  eventRecord.set('eventId', eventId);
+  eventRecord.set('type', event.type);
+  eventRecord.set('processedAt', new Date());
+  await eventRecord.save(null, { useMasterKey: true }).catch(err => {
+    console.warn('[membership] Could not save webhook event record:', err.message);
+  });
+
   try {
     switch (event.type) {
       case 'checkout.session.completed':
@@ -44,7 +65,8 @@ export default async function stripeWebhook(req, res) {
     }
   } catch (err) {
     console.error(`[membership] Webhook handler error for ${event.type}:`, err.message);
-    return res.status(500).json({ error: 'Webhook handler failed' });
+    // Return 200 to prevent Stripe retries — we've logged the error
+    return res.status(200).json({ received: true, error: err.message });
   }
 
   res.status(200).json({ received: true });
@@ -146,7 +168,11 @@ async function handleSubscriptionDeleted(stripeSubscription) {
   planQuery.equalTo('slug', 'free');
   const freePlan = await planQuery.first({ useMasterKey: true });
 
-  if (freePlan) {
+  if (!freePlan) {
+    console.error('[membership] CRITICAL: No free plan found for subscription downgrade');
+    // Set PlanId to null to avoid referencing the old paid plan
+    subscription.unset('PlanId');
+  } else {
     subscription.set('PlanId', freePlan.toPointer());
   }
   subscription.set('status', 'canceled');

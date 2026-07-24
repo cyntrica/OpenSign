@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { appName, cloudServerUrl, serverAppId } from '../../Utils.js';
+import { appName, emailLogoUrl, emailRegex, escapeHtml, cloudServerUrl, serverAppId } from '../../Utils.js';
 
 export default async function forwardDoc(request) {
   try {
@@ -32,37 +32,49 @@ export default async function forwardDoc(request) {
       const replyTo = _docRes?.ExtUserPtr?.Email;
       const senderName = _docRes?.ExtUserPtr?.Name;
 
-      try {
-        let mailRes;
-        for (let i = 0; i < recipients.length; i++) {
-          const logo = `<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>`;
-          const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
-          const themeColor = '#47a3ad';
+      // Validate recipient email addresses
+      const validRecipients = recipients.filter(r => emailRegex.test(r.email || r));
+      if (validRecipients.length === 0) {
+        throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'No valid email addresses provided.');
+      }
 
-          let params = {
-            extUserId: extUserId,
-            pdfName: docName,
-            url: _docRes?.SignedUrl || '',
-            recipient: recipients[i],
-            subject: `${senderName} has signed the doc - ${docName}`,
-            replyto: replyTo || '',
-            from: from,
-            html:
-              `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'><div>` +
-              `${logo}</div><div style='padding:2px;font-family:system-ui;background-color:${themeColor}'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document Copy</p></div><div>` +
-              `<p style='padding:20px;font-family:system-ui;font-size:14px'>A copy of the document <strong>${docName}</strong> is attached to this email. Kindly download the document from the attachment.</p>` +
-              `</div></div><div><p>This is an automated email from ${TenantAppName}. For any queries regarding this email, please contact the sender ${replyTo} directly. ` +
-              `If you think this email is inappropriate or spam, you may file a complaints with ${TenantAppName}${opurl}.</p></div></div></body></html>`,
-          };
-          mailRes = await axios.post(`${cloudServerUrl}/functions/sendmailv3`, params, {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Parse-Application-Id': serverAppId,
-              'X-Parse-Master-Key': process.env.MASTER_KEY,
-            },
-          });
-        }
-        return mailRes.data?.result;
+      try {
+        const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
+        const logo = `<img src='${logoSrc}' height='50' style='padding:20px'/>`;
+        const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
+        const themeColor = '#47a3ad';
+
+        const results = await Promise.allSettled(
+          validRecipients.map(async (recipient) => {
+            const recipientEmail = recipient.email || recipient;
+            const params = {
+              extUserId: extUserId,
+              pdfName: docName,
+              url: _docRes?.SignedUrl || '',
+              recipient: recipientEmail,
+              subject: `${senderName} has signed the doc - ${docName}`,
+              replyto: replyTo || '',
+              from: from,
+              html:
+                `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'><div>` +
+                `${logo}</div><div style='padding:2px;font-family:system-ui;background-color:${themeColor}'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document Copy</p></div><div>` +
+                `<p style='padding:20px;font-family:system-ui;font-size:14px'>A copy of the document <strong>${escapeHtml(docName)}</strong> is attached to this email. Kindly download the document from the attachment.</p>` +
+                `</div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, please contact the sender ${escapeHtml(replyTo)} directly. ` +
+                `If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`,
+            };
+            return axios.post(`${cloudServerUrl}/functions/sendmailv3`, params, {
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Parse-Application-Id': serverAppId,
+                'X-Parse-Master-Key': process.env.MASTER_KEY,
+              },
+            });
+          })
+        );
+        const succeeded = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (failed > 0) console.warn(`[ForwardDoc] ${failed}/${results.length} emails failed`);
+        return { success: true, sent: succeeded, failed };
       } catch (error) {
         const msg =
           error?.response?.data?.error ||

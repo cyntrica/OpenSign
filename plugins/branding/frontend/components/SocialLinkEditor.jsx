@@ -1,7 +1,10 @@
 // SocialLinkEditor — editable list of social media links
 // Each link has icon class, title, URL, sortOrder.
 
-export default function SocialLinkEditor({ links, onChange }) {
+export default function SocialLinkEditor({ links: rawLinks, onChange }) {
+  // Ensure all links have a stable ID (Finding #57)
+  const links = (rawLinks || []).map(link => link.id ? link : { ...link, id: crypto.randomUUID() });
+
   const updateLink = (index, field, value) => {
     const updated = links.map((link, i) =>
       i === index ? { ...link, [field]: value } : link
@@ -10,15 +13,8 @@ export default function SocialLinkEditor({ links, onChange }) {
   };
 
   const addLink = () => {
-    onChange([
-      ...links,
-      {
-        icon: "fa-brands fa-link",
-        title: "",
-        url: "",
-        sortOrder: links.length,
-      },
-    ]);
+    const newLink = { id: crypto.randomUUID(), icon: "fa-brands fa-link", title: "", url: "", sortOrder: links.length };
+    onChange([...links, newLink]);
   };
 
   const removeLink = (index) => {
@@ -30,16 +26,16 @@ export default function SocialLinkEditor({ links, onChange }) {
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= newLinks.length) return;
     [newLinks[index], newLinks[targetIndex]] = [newLinks[targetIndex], newLinks[index]];
-    // Update sortOrder
-    newLinks.forEach((link, i) => (link.sortOrder = i));
-    onChange(newLinks);
+    // Update sortOrder immutably (Finding #57 — avoid in-place mutation)
+    const updated = newLinks.map((link, i) => ({ ...link, sortOrder: i }));
+    onChange(updated);
   };
 
   return (
     <div className="space-y-3">
       {links.map((link, index) => (
         <div
-          key={index}
+          key={link.id}
           className="op-card bg-base-200 p-3 flex flex-col gap-2"
         >
           <div className="flex items-center gap-2">

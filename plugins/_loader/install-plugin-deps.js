@@ -11,7 +11,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -41,10 +41,22 @@ function collectDeps(target) {
   return allDeps;
 }
 
-function main() {
-  // Determine which target we're installing for based on cwd
+function detectTarget() {
   const cwd = process.cwd();
-  const target = cwd.includes('OpenSignServer') ? 'server' : 'client';
+  // Check cwd path first (works in dev)
+  if (cwd.includes('OpenSignServer')) return 'server';
+  if (cwd.includes('OpenSign') && !cwd.includes('Server')) return 'client';
+  // Fall back to reading package.json name (works in Docker where cwd = /usr/src/app)
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8'));
+    if (pkg.name && /server/i.test(pkg.name)) return 'server';
+  } catch { /* ignore */ }
+  return 'client';
+}
+
+function main() {
+  const cwd = process.cwd();
+  const target = detectTarget();
   const deps = collectDeps(target);
   const depEntries = Object.entries(deps);
 
@@ -53,11 +65,11 @@ function main() {
     return;
   }
 
-  const installArgs = depEntries.map(([name, version]) => `${name}@${version}`).join(' ');
-  console.log(`[plugin-deps] Installing ${target} plugin dependencies: ${installArgs}`);
+  const installArgs = depEntries.map(([name, version]) => `${name}@${version}`);
+  console.log(`[plugin-deps] Installing ${target} plugin dependencies: ${installArgs.join(' ')}`);
 
   try {
-    execSync(`npm install --no-save ${installArgs}`, {
+    execFileSync('npm', ['install', '--no-save', ...installArgs], {
       cwd,
       stdio: 'inherit',
     });

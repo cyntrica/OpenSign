@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { appName, cloudServerUrl, serverAppId } from '../../Utils.js';
+import { appName, emailLogoUrl, escapeHtml, cloudServerUrl, serverAppId } from '../../Utils.js';
 const serverUrl = cloudServerUrl;
 const APPID = serverAppId;
 const masterKEY = process.env.MASTER_KEY;
@@ -12,8 +12,8 @@ const headers = {
 async function sendDeclineMail(doc, publicUrl, userId, reason) {
   try {
     const TenantAppName = appName;
-    const logo =
-      "<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>";
+    const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
+    const logo = `<img src='${logoSrc}' height='50' style='padding:20px'/>`;
     const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
     const removePrefill =
       doc?.Placeholders?.length > 0 && doc?.Placeholders?.filter(x => x?.Role !== 'prefill');
@@ -31,12 +31,12 @@ async function sendDeclineMail(doc, publicUrl, userId, reason) {
     const subject = `Document "${pdfName}" has been declined by ${signerName}`;
     const body =
       "<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'>" +
-      `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#47a3ad'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document declined by ${signerName}</p>` +
-      `</div><div style='padding:20px;font-family:system-ui;font-size:14px'><p>Dear ${creatorName},</p>` +
-      `<p>${pdfName} has been declined by ${signerName} "${signerEmail}" on ${new Date().toLocaleDateString()}.</p>` +
-      `<p>Decline Reason: ${reason || 'Not specified'}</p>` +
-      `<p><a href=${viewDocUrl} target=_blank>View Document</a></p></div></div><div><p>This is an automated email from ${TenantAppName}. For any queries regarding this email, ` +
-      `please contact the sender ${creatorEmail} directly. If you think this email is inappropriate or spam, you may file a complaints with ${TenantAppName}${opurl}.</p></div></div></body></html>`;
+      `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#47a3ad'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document declined by ${escapeHtml(signerName)}</p>` +
+      `</div><div style='padding:20px;font-family:system-ui;font-size:14px'><p>Dear ${escapeHtml(creatorName)},</p>` +
+      `<p>${escapeHtml(pdfName)} has been declined by ${escapeHtml(signerName)} "${escapeHtml(signerEmail)}" on ${new Date().toLocaleDateString()}.</p>` +
+      `<p>Decline Reason: ${escapeHtml(reason) || 'Not specified'}</p>` +
+      `<p><a href=${viewDocUrl} target=_blank>View Document</a></p></div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, ` +
+      `please contact the sender ${escapeHtml(creatorEmail)} directly. If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`;
 
     const params = {
       extUserId: sender.objectId,
@@ -66,13 +66,27 @@ export default async function declinedocument(request) {
     const updateDoc = await docCls.get(docId, { useMasterKey: true });
     if (updateDoc) {
       const _doc = JSON.parse(JSON.stringify(updateDoc));
+
+      // Verify the user is an authorized signer on this document
+      if (!userId) {
+        throw new Parse.Error(Parse.Error.INVALID_LINKED_SESSION, 'Missing userId parameter.');
+      }
+      const placeholders = _doc.Placeholders || [];
+      const isAuthorizedSigner = placeholders.some(p =>
+        p?.signerPtr?.UserId?.objectId === userId ||
+        p?.signerPtr?.objectId === userId
+      );
+      if (!isAuthorizedSigner) {
+        throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'You are not authorized to decline this document.');
+      }
+
       const isEnableOTP = updateDoc?.get('IsEnableOTP') || false;
       if (!isEnableOTP) {
         updateDoc.set('IsDeclined', true);
         updateDoc.set('DeclineReason', reason);
         updateDoc.set('DeclineBy', declineBy);
         await updateDoc.save(null, { useMasterKey: true });
-        sendDeclineMail(_doc, publicUrl, userId, reason);
+        sendDeclineMail(_doc, publicUrl, userId, reason).catch(err => console.error('[declinedocument] sendDeclineMail error:', err.message));
         return 'document declined';
       } else {
         if (!request?.user) {
@@ -82,7 +96,7 @@ export default async function declinedocument(request) {
         updateDoc.set('DeclineReason', reason);
         updateDoc.set('DeclineBy', declineBy);
         await updateDoc.save(null, { useMasterKey: true });
-        sendDeclineMail(_doc, publicUrl, userId, reason);
+        sendDeclineMail(_doc, publicUrl, userId, reason).catch(err => console.error('[declinedocument] sendDeclineMail error:', err.message));
         return 'document declined';
       }
     } else {

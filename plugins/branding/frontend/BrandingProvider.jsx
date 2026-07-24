@@ -23,10 +23,18 @@ const DEFAULTS = {
 };
 
 // Read cached branding from localStorage (synchronous, avoids flash)
+// Cache TTL: 24 hours (Finding #37)
 function readCache() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Check cache TTL: 24 hours
+      const cacheAge = Date.now() - (parsed._cachedAt || 0);
+      if (cacheAge < 24 * 60 * 60 * 1000) {
+        return parsed;
+      }
+    }
   } catch {
     // Corrupt cache — ignore
   }
@@ -35,7 +43,7 @@ function readCache() {
 
 function writeCache(data) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, _cachedAt: Date.now() }));
     localStorage.setItem(APPNAME_KEY, data.appName || DEFAULTS.appName);
   } catch {
     // localStorage full or unavailable
@@ -80,6 +88,10 @@ export function BrandingProvider({ children }) {
     } catch (err) {
       console.warn("[branding] Failed to fetch settings:", err.message);
       // Continue with cached or default values
+      // If fetch fails, retry once after 5 seconds (Finding #37)
+      setTimeout(() => {
+        fetchBranding().catch(() => {});
+      }, 5000);
     }
     setLoading(false);
   }, []);

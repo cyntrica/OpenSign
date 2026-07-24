@@ -2,7 +2,11 @@ import { getTenantIdFromExtUser } from '../lib/checkLimit.js';
 
 export default async function afterDocumentSave(payload) {
   try {
-    const { object } = payload;
+    const { request, object } = payload;
+
+    // If beforeDocumentSave already incremented usage, skip to avoid double-counting
+    if (request?._usageIncremented) return payload;
+
     const extUserPtr = object?.get('ExtUserPtr');
     const tenantId = await getTenantIdFromExtUser(extUserPtr);
     if (!tenantId) return payload;

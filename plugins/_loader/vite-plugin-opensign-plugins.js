@@ -53,10 +53,10 @@ export default function opensignPlugins() {
           const importPath = path.join(pluginsDir, plugin._dirName, page.component);
           const varName = `${plugin.namespace}_${page.path.replace(/\//g, '_').replace(/^_/, '')}`;
           imports.push(
-            `const ${varName} = lazy(() => import("${importPath}"));`
+            `const ${varName} = lazy(() => import(${JSON.stringify(importPath)}));`
           );
           routeEntries.push(
-            `{ path: "${page.path}", component: ${varName}, auth: ${page.auth ?? true}, plugin: "${plugin.namespace}" }`
+            `{ path: ${JSON.stringify(page.path)}, component: ${varName}, auth: ${JSON.stringify(page.auth ?? true)}, plugin: ${JSON.stringify(plugin.namespace)} }`
           );
         }
       }
@@ -83,10 +83,10 @@ export default function opensignPlugins() {
           const importPath = path.join(pluginsDir, plugin._dirName, page.component);
           const varName = `${plugin.namespace}_admin_${page.path.replace(/\//g, '_').replace(/^_/, '')}`;
           imports.push(
-            `const ${varName} = lazy(() => import("${importPath}"));`
+            `const ${varName} = lazy(() => import(${JSON.stringify(importPath)}));`
           );
           routeEntries.push(
-            `{ path: "${page.path}", component: ${varName}, auth: true, plugin: "${plugin.namespace}" }`
+            `{ path: ${JSON.stringify(page.path)}, component: ${varName}, auth: true, plugin: ${JSON.stringify(plugin.namespace)} }`
           );
           adminMenuEntries.push(JSON.stringify({
             icon: page.icon || 'fa-light fa-puzzle-piece',

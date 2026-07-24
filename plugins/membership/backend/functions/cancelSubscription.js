@@ -4,14 +4,19 @@ import { getStripeAsync } from '../lib/stripeClient.js';
 
 export default async function cancelSubscription(request) {
   if (!request.user) {
-    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'User not authenticated.');
+    throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'Authentication required.');
   }
 
-  // Get user's tenant subscription
+  // Only admins can cancel the organization's subscription
   const extQuery = new Parse.Query('contracts_Users');
   extQuery.equalTo('UserId', request.user.toPointer());
-  extQuery.select('TenantId');
+  extQuery.select('TenantId', 'UserRole');
   const extUser = await extQuery.first({ useMasterKey: true });
+  const role = extUser?.get('UserRole');
+  if (!['contracts_Admin', 'contracts_OrgAdmin'].includes(role)) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Only organization admins can cancel the subscription.');
+  }
+
   const tenantId = extUser?.get('TenantId')?.id;
 
   const subQuery = new Parse.Query('membership_Subscription');
@@ -19,6 +24,12 @@ export default async function cancelSubscription(request) {
     __type: 'Pointer', className: 'partners_Tenant', objectId: tenantId,
   });
   const subscription = await subQuery.first({ useMasterKey: true });
+
+  // Verify the subscription belongs to this user's tenant
+  const subTenantId = subscription?.get('TenantId')?.id;
+  if (subTenantId && subTenantId !== tenantId) {
+    throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Subscription does not belong to your organization.');
+  }
 
   if (!subscription?.get('stripeSubscriptionId')) {
     throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'No active paid subscription to cancel.');

@@ -113,6 +113,8 @@ function GuestLogin() {
         email: checkSplit[1]?.toLowerCase()?.replace(/\s/g, "")
       }));
       setEmail(checkSplit[1]?.toLowerCase()?.replace(/\s/g, ""));
+      // Persist guest email for post-signing account creation prompt
+      localStorage.setItem("guestSignerEmail", checkSplit[1]?.toLowerCase()?.replace(/\s/g, "") || "");
       const contactId = checkSplit?.[2];
       setSendmail(checkSplit[3]);
       if (!contactId) {
@@ -232,6 +234,8 @@ function GuestLogin() {
     if (!emailRegex.test(contact.email?.toLowerCase()?.replace(/\s/g, ""))) {
       alert(t("valid-email-alert"));
     } else {
+      // Persist guest name for post-signing account creation prompt
+      localStorage.setItem("guestSignerName", contact.name || "");
       const params = { ...contact, docId: documentId };
       try {
         setLoading(true);

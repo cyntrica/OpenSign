@@ -1,6 +1,9 @@
 // Shared limit enforcement utility
 // Checks whether a tenant has exceeded a specific plan limit.
 // Throws Parse.Error(OPERATION_FORBIDDEN) if the limit is reached.
+// Admin users (contracts_Admin, contracts_OrgAdmin) are exempt from all limits.
+
+const ADMIN_ROLES = ['contracts_Admin', 'contracts_OrgAdmin'];
 
 const LIMIT_LABELS = {
   documentsPerMonth: 'monthly document',
@@ -23,8 +26,17 @@ export async function checkLimit(tenantId, limitKey) {
   // No subscription = no limits enforced (graceful degradation)
   if (!subscription) return;
 
-  const plan = subscription.get('PlanId');
+  let plan = subscription.get('PlanId');
   if (!plan) return;
+
+  // If subscription is not in good standing, fall back to free plan limits
+  const status = subscription.get('status');
+  if (status && !['active', 'trialing'].includes(status)) {
+    const freePlanQuery = new Parse.Query('membership_Plan');
+    freePlanQuery.equalTo('slug', 'free');
+    const freePlan = await freePlanQuery.first({ useMasterKey: true });
+    if (freePlan) plan = freePlan;
+  }
 
   const limits = plan.get('limits');
   if (!limits || limits[limitKey] === undefined || limits[limitKey] === -1) {
@@ -53,6 +65,7 @@ export async function checkLimit(tenantId, limitKey) {
       __type: 'Pointer', className: 'partners_Tenant', objectId: tenantId,
     });
     usersQuery.select('TemplateCount');
+    usersQuery.limit(10000);
     const users = await usersQuery.find({ useMasterKey: true });
     currentUsage = users.reduce((sum, u) => sum + (u.get('TemplateCount') || 0), 0);
 
@@ -80,11 +93,42 @@ export async function checkLimit(tenantId, limitKey) {
   }
 }
 
-// Helper to resolve tenantId from an ExtUserPtr
+// Helper to resolve tenantId AND admin status from an ExtUserPtr.
+// Returns { tenantId, isAdmin } in a single DB query.
+export async function getExtUserInfo(extUserPtr) {
+  if (!extUserPtr?.id) return { tenantId: null, isAdmin: false };
+  try {
+    const extQuery = new Parse.Query('contracts_Users');
+    extQuery.select('TenantId', 'UserRole');
+    const extUser = await extQuery.get(extUserPtr.id, { useMasterKey: true });
+    const tenantId = extUser?.get('TenantId')?.id || null;
+    const role = extUser?.get('UserRole');
+    const isAdmin = ADMIN_ROLES.includes(role);
+    return { tenantId, isAdmin };
+  } catch {
+    return { tenantId: null, isAdmin: false };
+  }
+}
+
+// Legacy helper — kept for backward compatibility
 export async function getTenantIdFromExtUser(extUserPtr) {
-  if (!extUserPtr?.id) return null;
-  const extQuery = new Parse.Query('contracts_Users');
-  extQuery.select('TenantId');
-  const extUser = await extQuery.get(extUserPtr.id, { useMasterKey: true });
-  return extUser?.get('TenantId')?.id || null;
+  const { tenantId } = await getExtUserInfo(extUserPtr);
+  return tenantId;
+}
+
+// Check whether a Parse User is an admin (contracts_Admin or contracts_OrgAdmin).
+// Admin users are exempt from all plan limits.
+// Works with request.user (Parse User object).
+export async function isAdminUser(user) {
+  if (!user?.id) return false;
+  try {
+    const extQuery = new Parse.Query('contracts_Users');
+    extQuery.equalTo('UserId', user.toPointer());
+    extQuery.select('UserRole');
+    const extUser = await extQuery.first({ useMasterKey: true });
+    const role = extUser?.get('UserRole');
+    return ADMIN_ROLES.includes(role);
+  } catch {
+    return false;
+  }
 }

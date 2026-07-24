@@ -914,8 +914,13 @@ function PdfRequestFiles(
                       ?.IsCompleted
                       ? `&completed=true`
                       : "";
-                    const params =
+                    let params =
                           `docid=${updatedDoc.updatedPdfDetails[0].objectId}&docurl=${encodeURIComponent(url)}${isCompleted}${fileAdapter}`;
+                    // Pass guest signer info for post-signing account creation
+                    const _guestEmail = localStorage.getItem("guestSignerEmail");
+                    if (_guestEmail) params += `&signerEmail=${encodeURIComponent(_guestEmail)}`;
+                    const _guestName = localStorage.getItem("guestSignerName");
+                    if (_guestName) params += `&signerName=${encodeURIComponent(_guestName)}`;
                     window.location.href = `/success?${params}`;
                   }
                 } else {

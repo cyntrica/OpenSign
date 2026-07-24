@@ -28,8 +28,17 @@ export default async function onUserSignup(payload) {
     sub.set('PlanId', freePlan.toPointer());
     sub.set('status', 'active');
     sub.set('cancelAtPeriodEnd', false);
-    await sub.save(null, { useMasterKey: true });
-    console.log(`[membership] Created free subscription for new tenant ${tenantId}`);
+    try {
+      await sub.save(null, { useMasterKey: true });
+      console.log(`[membership] Created free subscription for new tenant ${tenantId}`);
+    } catch (saveErr) {
+      // Handle race condition: another signup may have created the subscription
+      if (saveErr.code === Parse.Error.DUPLICATE_VALUE || saveErr.message?.includes('duplicate')) {
+        console.log('[membership] Subscription already exists for tenant (concurrent signup)');
+      } else {
+        throw saveErr;
+      }
+    }
   } catch (err) {
     console.error('[membership] onUserSignup error:', err.message);
   }

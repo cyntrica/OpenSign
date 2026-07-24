@@ -32,7 +32,7 @@ function getThemeOverrides() {
         Object.assign(overrides[themeName], values);
       }
     } catch (e) {
-      // skip
+      console.warn('[plugins] Failed to parse manifest:', manifestPath, e.message);
     }
   }
   return overrides;

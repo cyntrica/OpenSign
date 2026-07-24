@@ -1,5 +1,7 @@
 let stripe = null;
 
+const STRIPE_API_VERSION = process.env.STRIPE_API_VERSION || '2024-12-18.acacia';
+
 // Lazy async initializer (dynamic import avoids crash if stripe isn't installed)
 let _stripePromise = null;
 export async function getStripeAsync() {
@@ -11,7 +13,7 @@ export async function getStripeAsync() {
       return null;
     }
     const { default: Stripe } = await import('stripe');
-    stripe = new Stripe(key, { apiVersion: '2024-12-18.acacia' });
+    stripe = new Stripe(key, { apiVersion: STRIPE_API_VERSION });
     return stripe;
   })();
   return _stripePromise;

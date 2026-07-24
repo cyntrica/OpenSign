@@ -35,12 +35,19 @@ export async function setup({ Parse, config }) {
   const existing = await query.first({ useMasterKey: true });
 
   if (!existing) {
-    const settings = new Parse.Object('branding_Settings');
-    for (const [key, value] of Object.entries(BRANDING_DEFAULTS)) {
-      settings.set(key, value);
+    try {
+      const settings = new Parse.Object('branding_Settings');
+      for (const [key, value] of Object.entries(BRANDING_DEFAULTS)) {
+        settings.set(key, value);
+      }
+      await settings.save(null, { useMasterKey: true });
+      console.log('[branding] Seeded default branding settings.');
+    } catch (seedErr) {
+      // Another server instance may have seeded simultaneously — not an error (Finding #36)
+      if (seedErr.code !== Parse.Error.DUPLICATE_VALUE) {
+        console.warn('[branding] Seed error:', seedErr.message);
+      }
     }
-    await settings.save(null, { useMasterKey: true });
-    console.log('[branding] Seeded default branding settings.');
   }
 
   console.log('[branding] Setup complete.');

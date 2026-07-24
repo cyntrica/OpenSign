@@ -30,7 +30,10 @@ export default async function createPortalSession(request) {
     throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'No Stripe customer found. You must have a paid subscription first.');
   }
 
-  const publicUrl = process.env.PUBLIC_URL || `https://${request.headers?.host || 'localhost'}`;
+  const publicUrl = process.env.PUBLIC_URL;
+  if (!publicUrl) {
+    throw new Parse.Error(Parse.Error.INTERNAL_SERVER_ERROR, 'PUBLIC_URL environment variable is required for portal session.');
+  }
   const session = await stripe.billingPortal.sessions.create({
     customer: stripeCustomerId,
     return_url: `${publicUrl}/billing`,

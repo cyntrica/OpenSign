@@ -7,9 +7,54 @@ import { parseUploadFile } from './utils/fileUtils.js';
 
 dotenv.config({ quiet: true });
 
+// HTML entity escaping for safe interpolation into email templates.
+// Prevents XSS when user-controlled values (names, titles, etc.) are
+// embedded in HTML email bodies.
+export function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export const cloudServerUrl = 'http://localhost:8080/app';
 export const serverAppId = process.env.APP_ID || 'opensign';
-export const appName = 'OpenSign™';
+// Default appName — overridden at startup from branding_Settings if available.
+// Exported as `let` so the live ES module binding updates for all importers.
+//
+// IMPORTANT: These are ES module live bindings. All importers see the current
+// value at READ time, not at import time. Do NOT cache these in module-level
+// constants (e.g., `const name = appName` at top of file). Instead, read them
+// inside functions or use getter wrappers like `getESignName()`.
+export let appName = 'SineSeal';
+export let emailLogoUrl = '';
+export let contactEmail = '';
+
+// Called once during server startup (after Parse is ready) to load the
+// branded app name and email logo from the database.  All modules that import
+// these will automatically see the updated values thanks to ES module live bindings.
+export async function initAppNameFromBranding() {
+  try {
+    const query = new Parse.Query('branding_Settings');
+    const settings = await query.first({ useMasterKey: true });
+    if (settings?.get('appName')) {
+      appName = settings.get('appName');
+      console.log(`[branding] Server appName set to: ${appName}`);
+    }
+    if (settings?.get('emailLogoUrl')) {
+      emailLogoUrl = settings.get('emailLogoUrl');
+      console.log(`[branding] Server emailLogoUrl set`);
+    }
+    if (settings?.get('contactEmail')) {
+      contactEmail = settings.get('contactEmail');
+    }
+  } catch (err) {
+    console.warn('[branding] Could not load appName from branding_Settings:', err.message);
+  }
+}
 export const prefillDraftDocWidget = ['date', 'textbox', 'checkbox', 'radio button', 'image'];
 export const prefillDraftTemWidget = [
   'date',
@@ -41,18 +86,16 @@ export const prefillBlockColor = 'transparent';
 export function replaceMailVaribles(subject, body, variables) {
   let replacedSubject = subject;
   let replacedBody = body;
-
   for (const variable in variables) {
-    const regex = new RegExp(`{{${variable}}}`, 'g');
+    const token = `{{${variable}}}`;
     if (subject) {
-      replacedSubject = replacedSubject.replace(regex, variables[variable]);
+      replacedSubject = replacedSubject.replaceAll(token, variables[variable]);
     }
     if (body) {
-      replacedBody = replacedBody.replace(regex, variables[variable]);
+      replacedBody = replacedBody.replaceAll(token, variables[variable]);
     }
   }
-  const result = { subject: replacedSubject, body: replacedBody };
-  return result;
+  return { subject: replacedSubject, body: replacedBody };
 }
 
 export const saveFileUsage = async (size, fileUrl, userId) => {
@@ -178,7 +221,7 @@ export function generateId(length) {
   let result = '';
   const charactersLength = characters.length;
   for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    result += characters.charAt(crypto.randomInt(charactersLength));
   }
   return result;
 }
@@ -251,33 +294,41 @@ export const getSecureUrl = url => {
 
 export const mailTemplate = param => {
   const themeColor = '#47a3ad';
+  const safeSenderName = escapeHtml(param.senderName);
+  const safeTitle = escapeHtml(param.title);
+  const safeSenderMail = escapeHtml(param.senderMail);
+  const safeOrganization = escapeHtml(param.organization);
+  const safeNote = escapeHtml(param.note);
+  const safeExpireDate = escapeHtml(param.localExpireDate);
+  const complaintEmail = contactEmail || 'support@sineseal.com';
   const subject = `${param.senderName} has requested you to sign "${param.title}"`;
   const AppName = appName;
-  const logo = `<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' />`;
+  const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
+  const logo = `<img src='${logoSrc}' height='50' />`;
 
-  const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
+  const opurl = ` <a href='mailto:${escapeHtml(complaintEmail)}' target=_blank>here</a>`;
 
   const body =
     "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background:white;padding-bottom:20px'><div style='padding:10px'>" +
     logo +
     `</div><div style='padding:2px;font-family:system-ui;background-color:${themeColor}'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Digital Signature Request</p></div><div><p style='padding:20px;font-size:14px;margin-bottom:10px'>` +
-    param.senderName +
+    safeSenderName +
     ' has requested you to review and sign <strong>' +
-    param.title +
+    safeTitle +
     "</strong>.</p><div style='padding: 5px 0px 5px 25px;display:flex;flex-direction:row;justify-content:space-around'><table><tr><td style='font-weight:bold;font-family:sans-serif;font-size:15px'>Sender</td><td></td><td style='color:#626363;font-weight:bold'>" +
-    param.senderMail +
+    safeSenderMail +
     "</td></tr><tr><td style='font-weight:bold;font-family:sans-serif;font-size:15px'>Organization</td><td></td><td style='color:#626363;font-weight:bold'> " +
-    param.organization +
+    safeOrganization +
     "</td></tr><tr><td style='font-weight:bold;font-family:sans-serif;font-size:15px'>Expires on</td><td></td><td style='color:#626363;font-weight:bold'>" +
-    param.localExpireDate +
+    safeExpireDate +
     "</td></tr><tr><td style='font-weight:bold;font-family:sans-serif;font-size:15px'>Note</td><td></td><td style='color:#626363;font-weight:bold'>" +
-    param.note +
+    safeNote +
     "</td></tr><tr><td></td><td></td></tr></table></div> <div style='margin-left:70px'><a target=_blank href=" +
     param.signingUrl +
     "><button style='padding:12px;background-color:#d46b0f;color:white;border:0px;font-weight:bold;margin-top:30px'>Sign here</button></a></div><div style='display:flex;justify-content:center;margin-top:10px'></div></div></div><div><p> This is an automated email from " +
     AppName +
     '. For any queries regarding this email, please contact the sender ' +
-    param.senderMail +
+    safeSenderMail +
     ` directly. If you think this email is inappropriate or spam, you may file a complaints with ${AppName}${opurl}.</p></div></div></body></html>`;
 
   return { subject, body };
@@ -340,9 +391,9 @@ export const handleValidImage = async Placeholder => {
     if (signerPtr?.id) {
       // Case 1: If signerPtr is a Parse Object instance
       if (signerPtr instanceof Parse.Object) {
-        // If signerPtr has no attributes, it’s a plain pointer already
+        // If signerPtr has no attributes, it's a plain pointer already
         if (!signerPtr.attributes || Object.keys(signerPtr.attributes).length === 0) {
-          // Convert to a clean pointer using Parse’s built-in method
+          // Convert to a clean pointer using Parse's built-in method
           signerPtr = signerPtr.toPointer();
         } else {
           // If it has attributes, manually construct the pointer object

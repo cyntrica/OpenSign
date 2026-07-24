@@ -6,6 +6,26 @@
 import { requireAdmin } from '../lib/requireAdmin.js';
 import { signFileUrl } from '../lib/signFileUrl.js';
 
+// Allowed MIME types and their magic byte signatures
+const ALLOWED_TYPES = {
+  'image/png':  [0x89, 0x50, 0x4E, 0x47],
+  'image/jpeg': [0xFF, 0xD8, 0xFF],
+  'image/gif':  [0x47, 0x49, 0x46],
+  'image/x-icon': [0x00, 0x00, 0x01, 0x00],
+  'image/vnd.microsoft.icon': [0x00, 0x00, 0x01, 0x00],
+};
+
+function validateImageBytes(base64Data) {
+  const buffer = Buffer.from(base64Data, 'base64');
+  for (const [mime, magic] of Object.entries(ALLOWED_TYPES)) {
+    if (magic.every((byte, i) => buffer[i] === byte)) return mime;
+  }
+  return null;
+}
+
+// Dangerous extensions that must always be rejected
+const BLOCKED_EXTENSIONS = ['.svg', '.html', '.htm', '.xml', '.xhtml'];
+
 const TYPE_TO_FIELD = {
   light: 'logoUrl',
   dark: 'logoDarkUrl',
@@ -49,8 +69,21 @@ export default async function uploadLogo(request) {
     );
   }
 
-  // Save as Parse File
+  // Validate file content by checking magic bytes (Finding #15)
+  const detectedMime = validateImageBytes(base64);
+  if (!detectedMime) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, 'Invalid file type. Only PNG, JPEG, GIF, and ICO images are allowed.');
+  }
+
+  // Validate file extension — reject dangerous extensions entirely
   const safeName = (fileName || `branding-${type}.png`).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const extMatch = safeName.match(/\.[^.]+$/);
+  const ext = extMatch ? extMatch[0].toLowerCase() : '';
+  if (BLOCKED_EXTENSIONS.includes(ext)) {
+    throw new Parse.Error(Parse.Error.VALIDATION_ERROR, `File extension "${ext}" is not allowed. Only PNG, JPEG, GIF, and ICO images are accepted.`);
+  }
+
+  // Save as Parse File
   const file = new Parse.File(safeName, { base64 });
   await file.save({ useMasterKey: true });
 
@@ -61,6 +94,21 @@ export default async function uploadLogo(request) {
 
   if (!settings) {
     settings = new Parse.Object('branding_Settings');
+  }
+
+  // Try to clean up the old file (Finding #56)
+  const oldUrl = settings.get(field);
+  if (oldUrl) {
+    try {
+      const oldFileName = oldUrl.split('/').pop()?.split('?')[0];
+      if (oldFileName) {
+        const oldFile = new Parse.File(oldFileName);
+        await oldFile.destroy({ useMasterKey: true });
+      }
+    } catch (e) {
+      // Old file cleanup is best-effort
+      console.warn('[branding] Could not delete old file:', e.message);
+    }
   }
 
   // Store the plain (unsigned) URL in the database — getSettings signs it on read
