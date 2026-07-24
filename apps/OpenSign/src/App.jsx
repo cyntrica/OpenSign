@@ -37,6 +37,9 @@ const UpdateExistUserAdmin = lazyWithRetry(
 const Preferences = lazyWithRetry(() => import("./pages/Preferences"));
 const Login = lazyWithRetry(() => import("./pages/Login"));
 const VerifyDocument = lazyWithRetry(() => import("./pages/VerifyDocument"));
+const PrivacyPolicy = lazyWithRetry(() => import("./pages/PrivacyPolicy"));
+const TermsAndConditions = lazyWithRetry(() => import("./pages/TermsAndConditions"));
+const Signup = lazyWithRetry(() => import("./pages/Signup"));
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.mjs`;
 const AppLoader = () => {
   return (
@@ -85,6 +88,9 @@ function App() {
               path="/login/:base64url"
               element={<Lazy Page={GuestLogin} />}
             />
+            <Route path="/privacy" element={<Lazy Page={PrivacyPolicy} />} />
+            <Route path="/tc" element={<Lazy Page={TermsAndConditions} />} />
+            <Route path="/signup" element={<Lazy Page={Signup} />} />
             <Route path="/debugpdf" element={<Lazy Page={DebugPdf} />} />
               <Route
                 path="/forgetpassword"
