@@ -1,0 +1,59 @@
+{
+  "name": "sms",
+  "namespace": "sms",
+  "version": "1.0.0",
+  "displayName": "SMS Notifications & OTP",
+  "description": "Twilio-powered SMS notifications, OTP verification, and signing reminders for document workflows.",
+  "envVars": [
+    { "name": "TWILIO_ACCOUNT_SID", "required": true },
+    { "name": "TWILIO_AUTH_TOKEN", "required": true },
+    { "name": "TWILIO_PHONE_NUMBER", "required": true },
+    { "name": "TWILIO_VERIFY_SERVICE_SID", "required": true }
+  ],
+  "backend": {
+    "entry": "backend/index.js",
+    "functions": [
+      { "name": "getSettings", "file": "backend/functions/getSettings.js" },
+      { "name": "saveSettings", "file": "backend/functions/saveSettings.js" },
+      { "name": "sendTestSms", "file": "backend/functions/sendTestSms.js" },
+      { "name": "getMessageLog", "file": "backend/functions/getMessageLog.js" },
+      { "name": "sendSmsOtp", "file": "backend/functions/sendSmsOtp.js" },
+      { "name": "verifySmsOtp", "file": "backend/functions/verifySmsOtp.js" },
+      { "name": "checkConsent", "file": "backend/functions/checkConsent.js" },
+      { "name": "updateConsent", "file": "backend/functions/updateConsent.js" },
+      { "name": "getSmsPreferences", "file": "backend/functions/getSmsPreferences.js" },
+      { "name": "saveSmsPreferences", "file": "backend/functions/saveSmsPreferences.js" }
+    ],
+    "routes": [
+      { "method": "POST", "path": "/twilio/status", "file": "backend/routes/twilioWebhook.js" }
+    ],
+    "jobs": [
+      { "name": "sendReminders", "file": "backend/jobs/sendReminders.js", "schedule": "every 15 minutes" }
+    ]
+  },
+  "frontend": {
+    "pages": [
+      { "path": "/smsprefs", "component": "frontend/pages/SmsPreferences.jsx", "auth": true }
+    ],
+    "menuItems": [
+      {
+        "icon": "fa-light fa-message-sms",
+        "title": "SMS Preferences",
+        "path": "smsprefs",
+        "position": "before:Settings"
+      }
+    ],
+    "adminPages": [
+      {
+        "path": "/settings/sms",
+        "component": "frontend/pages/SmsAdmin.jsx",
+        "title": "SMS Notifications",
+        "icon": "fa-light fa-message-sms"
+      }
+    ]
+  },
+  "hooks": [
+    { "event": "afterDocumentSave", "handler": "backend/hooks/afterDocumentSave.js" },
+    { "event": "afterSign", "handler": "backend/hooks/afterSign.js" }
+  ]
+}

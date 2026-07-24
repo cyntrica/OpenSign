@@ -1,0 +1,9 @@
+{
+  "name": "opensign-plugin-sms",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "serverDependencies": {
+    "twilio": "^5.0.0"
+  }
+}
