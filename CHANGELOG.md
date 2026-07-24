@@ -5,6 +5,28 @@ Based on [OpenSign](https://github.com/OpenSignLabs/OpenSign) v2.35.0. Fork main
 
 ---
 
+## [Unreleased] — 2026-07-24
+
+### Upstream sync — backported fixes from OpenSign v2.38
+
+Reviewed the delta between the fork point (~v2.34) and upstream `staging` (v2.38) and backported the security- and integrity-relevant fixes that the fork's own audit did not already cover.
+
+- **Google auth audience binding** (`OpenSignServer/index.js`): Google auth is now bound to `GOOGLE_CLIENT_ID` (was `google: { enabled: true }` with no client ID), so a Google `id_token` minted for any other OAuth client is rejected. New `GOOGLE_CLIENT_ID` env var documented in `.env.example`.
+- **File-path matching anchored to `/files/`** (`index.js`, `getSignedUrl.js` ×4): replaced loose `.includes('files')`, which could misroute non-file paths into the local-file presign branch.
+- **Terminal-state guards**: block declining completed/archived documents (`declinedocument.js`) and block signing declined/archived documents (`PDF.js`), complementing the existing signer-authorization check.
+- **Document-completion count fix** (`PDF.js`, both code paths): require at least one non-prefill placeholder and use `>=` instead of strict `===`, so audit-trail drift no longer leaves a document permanently un-completable and zero-placeholder documents are not auto-completed.
+
+### Mail sending: remove master-key-over-HTTP self-calls
+
+- `ForwardDoc.js`, `declinedocument.js`, and `PDF.js` (two sites) no longer send mail by POSTing to `${cloudServerUrl}/functions/sendmailv3` with `X-Parse-Master-Key` over an internal HTTP loopback. They now invoke `Parse.Cloud.run('sendmailv3', params, { useMasterKey: true })` in-process, eliminating the master key on the wire. `ForwardDoc` accounting was adjusted because `sendmailv3` resolves `{status:'error'}` rather than throwing.
+- Removed the now-unused `axios` / `cloudServerUrl` / `serverAppId` imports and header scaffolding from `ForwardDoc.js` and `declinedocument.js` (`PDF.js` retains `axios` for its document `PUT` calls).
+
+### Fixed
+
+- Replaced the remaining hardcoded `complaint@opensiglabs.com` spam-report links in `ForwardDoc.js`, `declinedocument.js`, and `PDF.js` (×2) with the branded `contactEmail` (fallback `support@sineseal.com`), completing the dynamic-contact-email work from the 2026-03 audit.
+
+---
+
 ## [Unreleased] — 2026-03-03
 
 ### Security & Code Quality Audit (61 findings fixed)
