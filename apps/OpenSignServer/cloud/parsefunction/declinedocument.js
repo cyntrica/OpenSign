@@ -1,20 +1,12 @@
-import axios from 'axios';
-import { appName, emailLogoUrl, escapeHtml, cloudServerUrl, serverAppId } from '../../Utils.js';
-const serverUrl = cloudServerUrl;
-const APPID = serverAppId;
-const masterKEY = process.env.MASTER_KEY;
-const headers = {
-  'Content-Type': 'application/json',
-  'X-Parse-Application-Id': APPID,
-  'X-Parse-Master-Key': masterKEY,
-};
+import { appName, emailLogoUrl, escapeHtml, contactEmail } from '../../Utils.js';
 
 async function sendDeclineMail(doc, publicUrl, userId, reason) {
   try {
     const TenantAppName = appName;
     const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
     const logo = `<img src='${logoSrc}' height='50' style='padding:20px'/>`;
-    const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
+    const complaintEmail = contactEmail || 'support@sineseal.com';
+    const opurl = ` <a href='mailto:${complaintEmail}' target=_blank>here</a>`;
     const removePrefill =
       doc?.Placeholders?.length > 0 && doc?.Placeholders?.filter(x => x?.Role !== 'prefill');
     const signUser =
@@ -46,7 +38,7 @@ async function sendDeclineMail(doc, publicUrl, userId, reason) {
       pdfName: pdfName,
       html: body,
     };
-    await axios.post(serverUrl + '/functions/sendmailv3', params, { headers });
+    await Parse.Cloud.run('sendmailv3', params, { useMasterKey: true });
   } catch (err) {
     console.log('err in sendnotifymail', err);
   }

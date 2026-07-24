@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { appName, emailLogoUrl, emailRegex, escapeHtml, cloudServerUrl, serverAppId } from '../../Utils.js';
+import { appName, emailLogoUrl, emailRegex, escapeHtml, contactEmail } from '../../Utils.js';
 
 export default async function forwardDoc(request) {
   try {
@@ -41,7 +40,8 @@ export default async function forwardDoc(request) {
       try {
         const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
         const logo = `<img src='${logoSrc}' height='50' style='padding:20px'/>`;
-        const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
+        const complaintEmail = contactEmail || 'support@sineseal.com';
+        const opurl = ` <a href='mailto:${complaintEmail}' target=_blank>here</a>`;
         const themeColor = '#47a3ad';
 
         const results = await Promise.allSettled(
@@ -62,25 +62,21 @@ export default async function forwardDoc(request) {
                 `</div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, please contact the sender ${escapeHtml(replyTo)} directly. ` +
                 `If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`,
             };
-            return axios.post(`${cloudServerUrl}/functions/sendmailv3`, params, {
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Parse-Application-Id': serverAppId,
-                'X-Parse-Master-Key': process.env.MASTER_KEY,
-              },
-            });
+            // Call the mail function in-process instead of an internal HTTP self-call
+            // that carried the master key over the wire.
+            return Parse.Cloud.run('sendmailv3', params, { useMasterKey: true });
           })
         );
-        const succeeded = results.filter(r => r.status === 'fulfilled').length;
-        const failed = results.filter(r => r.status === 'rejected').length;
-        if (failed > 0) console.warn(`[ForwardDoc] ${failed}/${results.length} emails failed`);
+        // sendmailv3 resolves with { status: 'error' } rather than throwing, so a
+        // settled promise is not by itself proof of delivery — check the status too.
+        const succeeded = results.filter(
+          r => r.status === 'fulfilled' && r.value?.status === 'success'
+        ).length;
+        const failed = validRecipients.length - succeeded;
+        if (failed > 0) console.warn(`[ForwardDoc] ${failed}/${validRecipients.length} emails failed`);
         return { success: true, sent: succeeded, failed };
       } catch (error) {
-        const msg =
-          error?.response?.data?.error ||
-          error?.response?.data ||
-          error?.message ||
-          'Something went wrong.';
+        const msg = error?.message || 'Something went wrong.';
         throw new Parse.Error(400, msg);
       }
     } else {

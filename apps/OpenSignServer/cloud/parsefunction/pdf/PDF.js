@@ -10,6 +10,7 @@ import {
   appName,
   emailLogoUrl,
   escapeHtml,
+  contactEmail,
   serverAppId,
 } from '../../../Utils.js';
 import GenerateCertificate from './GenerateCertificate.js';
@@ -127,7 +128,8 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
     const TenantAppName = appName;
     const logo =
       `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
-    const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
+    const complaintEmail = contactEmail || 'support@sineseal.com';
+    const opurl = ` <a href='mailto:${complaintEmail}' target=_blank>here</a>`;
     const auditTrailCount = doc?.AuditTrail?.filter(x => x.Activity === 'Signed')?.length || 0;
     const removePrefill =
       doc?.Placeholders?.length > 0 && doc?.Placeholders?.filter(x => x?.Role !== 'prefill');
@@ -158,7 +160,7 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
         html: body,
         mailProvider: mailProvider,
       };
-      await axios.post(serverUrl + '/functions/sendmailv3', params, { headers });
+      await Parse.Cloud.run('sendmailv3', params, { useMasterKey: true });
     }
   } catch (err) {
     console.log('err in sendnotifymail', err);
@@ -174,7 +176,8 @@ async function sendCompletedMail(obj) {
   const TenantAppName = appName;
   const logo =
     `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
-  const opurl = ` <a href='mailto:complaint@opensiglabs.com' target=_blank>here</a>`;
+  const complaintEmail = contactEmail || 'support@sineseal.com';
+  const opurl = ` <a href='mailto:${complaintEmail}' target=_blank>here</a>`;
   let signersMail;
   if (doc?.Signers?.length > 0) {
     const isOwnerExistsinSigners = doc?.Signers?.find(x => x.Email === sender.Email);
@@ -266,9 +269,8 @@ async function sendCompletedMail(obj) {
     filename: docName,
   };
   try {
-    const res = await axios.post(serverUrl + '/functions/sendmailv3', params, { headers });
-    // console.log('res', res.data.result);
-    if (res.data?.result?.status !== 'success') {
+    const res = await Parse.Cloud.run('sendmailv3', params, { useMasterKey: true });
+    if (res?.status !== 'success') {
       unlinkFile(`./exports/signed_certificate_${doc.objectId}.pdf`);
     }
   } catch (err) {
