@@ -10,6 +10,7 @@ import {
   appName,
   emailLogoUrl,
   escapeHtml,
+  contactEmail,
   serverAppId,
 } from '../../../Utils.js';
 import GenerateCertificate from './GenerateCertificate.js';
@@ -41,7 +42,9 @@ const APPID = serverAppId;
 const masterKEY = process.env.MASTER_KEY;
 // Computed at call-time so it picks up the branded appName after server init
 const getESignName = () => appName.replace(/[™®©]/g, '');
-const eSigncontact = 'hello@opensignlabs.com';
+// Call-time for the same reason: contactEmail is a runtime-populated live binding.
+// Lands in the PDF signature dictionary (visible in e.g. Adobe's signature panel).
+const getESignContact = () => contactEmail || 'support@sineseal.com';
 const docUrl = `${serverUrl}/classes/contracts_Document`;
 const headers = {
   'Content-Type': 'application/json',
@@ -315,7 +318,7 @@ async function sendMailsaveCertifcate(doc, pfx, isCustomMail, mailProvider, file
     reason: `Digitally signed by ${getESignName()}.`,
     location: 'n/a',
     name: getESignName(),
-    contactInfo: eSigncontact,
+    contactInfo: getESignContact(),
     signatureLength: 16000,
   });
   const pdfWithPlaceholderBytes = await certificatePdf.save();
@@ -369,7 +372,7 @@ async function processPdf(_resDoc, PdfBuffer, reason) {
     reason: `Digitally signed by ${getESignName()} for ${reason}`,
     location: 'n/a',
     name: getESignName(),
-    contactInfo: eSigncontact,
+    contactInfo: getESignContact(),
     signatureLength: 16000,
   });
   const pdfWithPlaceholderBytes = await pdfDoc.save();
