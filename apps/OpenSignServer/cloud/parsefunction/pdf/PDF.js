@@ -10,7 +10,6 @@ import {
   appName,
   emailLogoUrl,
   escapeHtml,
-  contactEmail,
   serverAppId,
 } from '../../../Utils.js';
 import GenerateCertificate from './GenerateCertificate.js';
@@ -155,8 +154,6 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
     const TenantAppName = appName;
     const logo =
       `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
-    const complaintEmail = contactEmail || 'support@sineseal.com';
-    const opurl = ` <a href='mailto:${complaintEmail}' target=_blank>here</a>`;
     const auditTrailCount =
       doc?.AuditTrail?.filter(x => COMPLETION_ACTIVITIES.includes(x.Activity))?.length || 0;
     const completionRelevant =
@@ -177,7 +174,7 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
         `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#47a3ad'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document signed by ${escapeHtml(signerName)}</p>` +
         `</div><div style='padding:20px;font-family:system-ui;font-size:14px'><p>Dear ${escapeHtml(creatorName)},</p><p>${escapeHtml(pdfName)} has been signed by ${escapeHtml(signerName)} "${escapeHtml(signerEmail)}" successfully</p>` +
         `<p><a href=${viewDocUrl} target=_blank>View Document</a></p></div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, ` +
-        `please contact the sender ${escapeHtml(creatorEmail)} directly. If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`;
+        `please contact the sender ${escapeHtml(creatorEmail)} directly.</p></div></div></body></html>`;
 
       const params = {
         extUserId: sender.objectId,
@@ -204,8 +201,6 @@ async function sendCompletedMail(obj) {
   const TenantAppName = appName;
   const logo =
     `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
-  const complaintEmail = contactEmail || 'support@sineseal.com';
-  const opurl = ` <a href='mailto:${complaintEmail}' target=_blank>here</a>`;
   let signersMail;
   if (doc?.Signers?.length > 0) {
     const isOwnerExistsinSigners = doc?.Signers?.find(x => x.Email === sender.Email);
@@ -221,8 +216,7 @@ async function sendCompletedMail(obj) {
     "<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background-color:white'>" +
     `<div>${logo}</div><div style='padding:2px;font-family:system-ui;background-color:#47a3ad'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Document signed successfully</p></div><div>` +
     `<p style='padding:20px;font-family:system-ui;font-size:14px'>All parties have successfully signed the document <b>"${escapeHtml(pdfName)}"</b>. Kindly download the document from the attachment.</p>` +
-    `</div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, please contact the sender ${escapeHtml(sender.Email)} directly.` +
-    `If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`;
+    `</div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, please contact the sender ${escapeHtml(sender.Email)} directly.</p></div></div></body></html>`;
 
   if (obj?.isCustomMail) {
     const tenant = sender?.TenantId;

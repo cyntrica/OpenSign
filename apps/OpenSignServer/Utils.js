@@ -726,13 +726,10 @@ export const mailTemplate = param => {
   const safeOrganization = escapeHtml(param.organization);
   const safeNote = escapeHtml(param.note);
   const safeExpireDate = escapeHtml(param.localExpireDate);
-  const complaintEmail = contactEmail || 'support@sineseal.com';
   const subject = `${param.senderName} has requested you to sign "${param.title}"`;
   const AppName = appName;
   const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
   const logo = `<img src='${logoSrc}' height='50' />`;
-
-  const opurl = ` <a href='mailto:${escapeHtml(complaintEmail)}' target=_blank>here</a>`;
 
   const body =
     "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background:white;padding-bottom:20px'><div style='padding:10px'>" +
@@ -755,7 +752,7 @@ export const mailTemplate = param => {
     AppName +
     '. For any queries regarding this email, please contact the sender ' +
     safeSenderMail +
-    ` directly. If you think this email is inappropriate or spam, you may file a complaints with ${AppName}${opurl}.</p></div></div></body></html>`;
+    ` directly.</p></div></div></body></html>`;
 
   return { subject, body };
 };

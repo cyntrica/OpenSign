@@ -1,4 +1,4 @@
-import { appName, emailLogoUrl, escapeHtml, contactEmail } from '../../Utils.js';
+import { appName, emailLogoUrl, escapeHtml } from '../../Utils.js';
 import sendSystemMail from './sendSystemMail.js';
 
 async function sendDeclineMail(doc, publicUrl, userId, reason) {
@@ -6,8 +6,6 @@ async function sendDeclineMail(doc, publicUrl, userId, reason) {
     const TenantAppName = appName;
     const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
     const logo = `<img src='${logoSrc}' height='50' style='padding:20px'/>`;
-    const complaintEmail = contactEmail || 'support@sineseal.com';
-    const opurl = ` <a href='mailto:${complaintEmail}' target=_blank>here</a>`;
     const removePrefill =
       doc?.Placeholders?.length > 0 && doc?.Placeholders?.filter(x => x?.Role !== 'prefill');
     const signUser =
@@ -29,7 +27,7 @@ async function sendDeclineMail(doc, publicUrl, userId, reason) {
       `<p>${escapeHtml(pdfName)} has been declined by ${escapeHtml(signerName)} "${escapeHtml(signerEmail)}" on ${new Date().toLocaleDateString()}.</p>` +
       `<p>Decline Reason: ${escapeHtml(reason) || 'Not specified'}</p>` +
       `<p><a href=${viewDocUrl} target=_blank>View Document</a></p></div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, ` +
-      `please contact the sender ${escapeHtml(creatorEmail)} directly. If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`;
+      `please contact the sender ${escapeHtml(creatorEmail)} directly.</p></div></div></body></html>`;
 
     const params = {
       extUserId: sender.objectId,
