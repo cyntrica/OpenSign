@@ -2,6 +2,11 @@
 
 # dependencies
 /node_modules
+/apps/OpenSign/node_modules
+/apps/OpenSignServer/node_modules
+# host-side equivalent of the Dockerhubfile's node_modules symlink so plugin
+# frontends (outside the Vite app root) resolve bare imports like 'react'
+/plugins/node_modules
 /.pnp
 .pnp.js
 
