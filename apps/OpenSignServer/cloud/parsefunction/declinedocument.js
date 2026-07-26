@@ -80,6 +80,9 @@ export default async function declinedocument(request) {
       if (_doc.IsArchive) {
         throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'Cannot decline an archived document.');
       }
+      if (_doc.IsDeclined) {
+        throw new Parse.Error(Parse.Error.OPERATION_FORBIDDEN, 'This document has already been declined.');
+      }
 
       const isEnableOTP = updateDoc?.get('IsEnableOTP') || false;
       const isCreator = _doc?.CreatedBy?.objectId === userId;
