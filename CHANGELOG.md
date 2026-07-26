@@ -5,7 +5,23 @@ Based on [OpenSign](https://github.com/OpenSignLabs/OpenSign) v2.35.0. Fork main
 
 ---
 
-## [Unreleased] — 2026-07-24
+## [Unreleased] — 2026-07-26
+
+### Upstream sync — merged OpenSign v2.40.1
+
+Merged upstream tag v2.40.1 (from fork base ~v2.34; 233 upstream files changed, 12 content conflicts resolved). Fork now converges on upstream's implementations wherever adequate, with fork hardening retained as small deltas.
+
+- **Mail transport**: adopted upstream's in-process `sendMailWithAttachment`/`sendSystemMail` helpers across ForwardDoc, declinedocument, PDF.js (and upstream's own conversions in createBatchDocs, deleteUtils) — retires both upstream's old master-key HTTP self-calls and the fork's interim `Parse.Cloud.run` approach. Fork hardening survives: `escapeHtml` on all user-controlled email values, recipient validation + `Promise.allSettled` in ForwardDoc, signer authorization + terminal-state guards in declinedocument.
+- **Completion counting**: adopted upstream's `utils/workflowUtils.js` (`COMPLETION_ACTIVITIES`/`isCompletionRelevant`, `>=` + `length>0`) — supersedes the fork's equivalent inline fix. Brings strict signing-order enforcement (`SendInOrderStrict`, default off).
+- **aws-sdk v2 fully removed**: async `getPresignedUrl` on `@aws-sdk/client-s3` v3; `@parse/s3-files-adapter` v4→v5; verified presign returns string URLs and a full MinIO store/presign/fetch round-trip.
+- **New upstream features on board**: EmailBuilder (dompurify-sanitized), `createdocumentfromapp`, templatelinks, Cc field, UseNameAsSender (ForwardDoc from/reply-to now prefers SenderName/SenderMail — accepted deliberately).
+- **Fixed upstream landmine**: v2.40.1 calls `normalizeEmail()` in usersignup without defining it anywhere (signup would throw ReferenceError). Implemented conservatively (trim + lowercase + strip whitespace; no gmail dot/plus collapsing) in `Utils.js`; the `normalizedEmail` sparse-unique index migration verified on a fresh DB.
+- **De-branding**: the OpenSign™/`complaints@opensignlabs.com` `reportMsg` footer upstream hardcoded into sendMailv3, sendSystemMail, and sendMailWithAttachment now uses the branded appName + runtime `contactEmail` (URL-encoded); removed the fork's now-redundant complaint tails from mailTemplate/PDF.js/declinedocument/ForwardDoc (helpers own the footer — exactly one per mail, verified in Mailpit).
+- **ForwardDoc client bug fixed in passing**: now returns `{status, sent, failed}` so the forward-success modal actually appears (client checks `status === 'success'`).
+- **Deps**: dropped upstream's per-app lockfiles (fork convention: root lockfile only; plugin postinstall deps); bounded `vite >=8.0.16` to `^8.0.16`. Client builds cleanly under Vite 8/Rolldown with the plugin virtual module — requires the `plugins/node_modules` symlink the Dockerhubfile already creates (now documented + gitignored for host-side dev).
+- **Known deferrals (backlog)**: de-brand upstream's emailbuilder sample templates (they insert OpenSign™ into customer mail) and the `RenderReportCell` i18n key; `eSigncontact` addresses; upstream's ESLint 9 + legacy `.eslintrc` combo (their lint is broken at v2.40.1 too — `node --check` sweep used instead).
+
+**Verified**: 4 plugins load with zero errors (boot gate); all 6 new DB migrations + normalizedEmail unique index applied; signup stores normalizedEmail and fires the membership onUserSignup hook; login; signed-URL round-trip (signed 200 / stripped 400); Stripe webhook route mounts (graceful without keys); branded single-footer mail via Mailpit; S3 (MinIO) store+presign+fetch; Vite 8 production build with plugin CSS present; both Docker images build; dashboard/Billing/sidebar plugin UI render branded.
 
 ### Upstream sync — backported fixes from OpenSign v2.38
 
