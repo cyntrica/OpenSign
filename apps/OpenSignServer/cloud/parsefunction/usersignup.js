@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { cloudServerUrl, serverAppId } from '../../Utils.js';
+import { cloudServerUrl, serverAppId, normalizeEmail } from '../../Utils.js';
 const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
 const APPID = serverAppId;
 const masterKEY = process.env.MASTER_KEY;

@@ -188,6 +188,16 @@ export const smtpenable =
   process.env.SMTP_ENABLE && process.env.SMTP_ENABLE.toLowerCase() === 'true' ? true : false;
 export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Canonical form for the sparse-unique _User.normalizedEmail dedupe key
+// (upstream v2.40.1 calls this in usersignup.js but never defined it).
+// Deliberately conservative — lowercase + strip whitespace, matching the
+// call site's existing semantics. No gmail-dot/plus-tag collapsing: that
+// would invent identity-dedup policy and could lock out a+work@/a+home@.
+export function normalizeEmail(email) {
+  if (typeof email !== 'string') return '';
+  return email.trim().toLowerCase().replace(/\s/g, '');
+}
+
 // `generateId` is used to unique Id for fileAdapter
 export function generateId(length) {
   const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
