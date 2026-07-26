@@ -27,9 +27,9 @@ import {
   getBase64MimeType,
   drawWidget,
   getBase64FromUrl,
-  clearResponse
+  clearResponse,
+  isEmptyValue
 } from "../../constant/Utils";
-import CellsWidget from "./CellsWidget";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import moment from "moment";
@@ -61,6 +61,7 @@ import UploadImage from "./tab/UploadImage";
 import TypeSignature from "./tab/TypeSignature";
 import PenColorComponent from "./tab/PenColorComponent";
 import TextInput from "./widgets/TextInput";
+import CellsInput from "./widgets/CellsInput";
 
 const fontOptions = [
   { value: "Fasthand" },
@@ -95,8 +96,6 @@ function WidgetsValueModal(props) {
     setXyPosition,
     isSave,
     signatureTypes,
-    setCellCount,
-    allowCellResize = true,
     penColors
   } = props;
   const previousWidgetRes = signatureResponse?.find(
@@ -162,45 +161,21 @@ function WidgetsValueModal(props) {
     );
   });
   const blocked = [
-    "checkbox",
-    "dropdown",
-    "date",
-    "radio",
   ];
   const blockedTab = ["mysignature", "myinitials", "myStamp"];
   const showClearbtn =
     (!blocked.includes(type) && !blockedTab.includes(isTab));
-  const [cellsValue, setCellsValue] = useState(() => {
-    const count = currWidgetsDetails?.options?.cellCount || 5;
-    const val =
-      currWidgetsDetails?.options?.response ||
-      currWidgetsDetails?.options?.defaultValue ||
-      "";
-    return Array.from({ length: count }, (_, i) => val[i] || "");
-  });
   const isSignOrInitials = ["signature", "initials"].includes(
     currWidgetsDetails?.type
   );
   const isImageOrStamp = ["image", "stamp"].includes(currWidgetsDetails?.type);
-  const cellRefs = useRef([]);
   const widgetRef = useRef(null);
-  // keep track of the first empty cell to automatically focus it after updates
   useEffect(() => {
-    const index = cellsValue.findIndex((v) => !v);
-    if (index !== -1) {
-      setTimeout(() => {
-        cellRefs.current[index]?.focus();
-      }, 0);
-    }
-  }, [cellsValue]);
-
-  useEffect(() => {
-    const count = currWidgetsDetails?.options?.cellCount || 5;
     const val =
       currWidgetsDetails?.options?.response ||
       currWidgetsDetails?.options?.defaultValue ||
       "";
-    setCellsValue(Array.from({ length: count }, (_, i) => val[i] || ""));
+    setWidgetValue(String(val || ""));
   }, [currWidgetsDetails?.key, currWidgetsDetails?.options?.cellCount]);
   useEffect(() => {
     dispatch(setScrollTriggerId(currWidgetsDetails?.key));
@@ -218,16 +193,24 @@ function WidgetsValueModal(props) {
   // below useEffect is used to focus text widgets when user open modal
   useEffect(() => {
     if (widgetRef?.current) {
-      const clearFocus = setTimeout(() => widgetRef?.current.focus(), 10);
+      const clearFocus = setTimeout(
+        () => widgetRef?.current.focus({ preventScroll: true }),
+        10
+      );
       return () => clearTimeout(clearFocus);
     }
   }, [widgetRef.current]);
 
   useEffect(() => {
     if (
-      ["name", "email", "job title", "company", textInputWidget].includes(
-        currWidgetsDetails?.type
-      )
+      [
+        "name",
+        "email",
+        "job title",
+        "company",
+        textInputWidget,
+        cellsWidget
+      ].includes(currWidgetsDetails?.type)
     ) {
       if (currWidgetsDetails?.options?.hint) {
         setHint(currWidgetsDetails?.options.hint);
@@ -240,7 +223,10 @@ function WidgetsValueModal(props) {
         setHint(currWidgetsDetails?.type);
       }
     }
-    else if (isSignOrInitials) {
+
+    else if (currWidgetsDetails?.type === "date") {
+      setHint(currWidgetsDetails?.options.hint || "");
+    } else if (isSignOrInitials) {
       if (currWidgetsDetails?.signatureType) {
         setIsTab(currWidgetsDetails?.signatureType);
       }
@@ -293,6 +279,10 @@ function WidgetsValueModal(props) {
       uniqueId,
       false,
       data?.format,
+      currWidgetsDetails?.options?.fontSize,
+      currWidgetsDetails?.options?.fontColor,
+      null,
+      null,
     );
     setSelectDate({ date: date, format: data?.format });
   };
@@ -356,9 +346,9 @@ function WidgetsValueModal(props) {
         prev.map((signer) => {
           if (signer.Id !== uniqueId) return signer;
 
-          // Find the placeholder index for current page
-          const index = signer.placeHolder.findIndex(
-            (x) => x.pageNumber === pageNumber
+          // Find the placeholder index for the page containing the current widget
+          const index = signer.placeHolder.findIndex((x) =>
+            x.pos?.some((p) => p.key === currWidgetsDetails?.key)
           );
           // Get updated placeholder list
           const updatedPlaceholders = onSaveImage(
@@ -399,9 +389,9 @@ function WidgetsValueModal(props) {
         }
       }
     } else {
-      const index = props?.xyPosition?.findIndex((object) => {
-        return object.pageNumber === pageNumber;
-      });
+      const index = props?.xyPosition?.findIndex(
+        (p) => p.pageNumber === (currWidgetsDetails?.pageNumber || pageNumber)
+      );
       const getImage = onSaveImage(
         signatureType,
         props?.xyPosition,
@@ -458,8 +448,8 @@ function WidgetsValueModal(props) {
         prevState.map((signer) => {
           if (signer.Id !== uniqueId) return signer;
 
-          const placeholderIndex = signer.placeHolder.findIndex(
-            (x) => x.pageNumber === pageNumber
+          const placeholderIndex = signer.placeHolder.findIndex((x) =>
+            x.pos?.some((p) => p.key === currWidgetsDetails?.key)
           );
           const updatedPlaceholders = onSaveSign(
             signType,
@@ -496,9 +486,9 @@ function WidgetsValueModal(props) {
         );
       }
     } else {
-      const index = props?.xyPosition?.findIndex((object) => {
-        return object.pageNumber === pageNumber;
-      });
+      const index = props?.xyPosition?.findIndex(
+        (p) => p.pageNumber === (currWidgetsDetails?.pageNumber || pageNumber)
+      );
       const getUpdatePosition = onSaveSign(
         signType,
         props?.xyPosition,
@@ -606,14 +596,9 @@ function WidgetsValueModal(props) {
       }
     } else {
       if (currWidgetsDetails?.type === cellsWidget) {
-        const count =
-          currWidgetsDetails?.options?.cellCount || cellsValue.length || 1;
-        const cleared = Array.from({ length: count }, () => "");
-        setCellsValue(cleared);
-        const combined = cleared.join("");
-        setWidgetValue(combined);
+        setWidgetValue("");
         onChangeInput(
-          combined,
+          "",
           currWidgetsDetails,
           xyPosition,
           props.index,
@@ -621,7 +606,9 @@ function WidgetsValueModal(props) {
           uniqueId
         );
       } else {
+        setSelectedCheckbox([]);
         setWidgetValue("");
+        setStartDate("");
         onChangeInput(
           "",
           currWidgetsDetails,
@@ -1044,8 +1031,16 @@ function WidgetsValueModal(props) {
   const handleOnchangeTextBox = (e) => {
     // hide any prior validation error while typing
     setIsShowValidation(false);
-    let value = e.target.value;
+    let value =
+      currWidgetsDetails?.type === "dropdown"
+        ? e.target?.value?.trim()
+        : e.target.value;
     setWidgetValue(value);
+    props.setCurrWidgetsDetails?.((prev) =>
+      prev && prev.key === currWidgetsDetails?.key
+        ? { ...prev, options: { ...prev.options, response: value } }
+        : prev
+    );
     onChangeInput(
       value,
       currWidgetsDetails,
@@ -1055,17 +1050,16 @@ function WidgetsValueModal(props) {
       uniqueId
     );
   };
+
   const updateCells = (updated) => {
-    setCellsValue(updated);
-    const combined = updated.join("");
-    setWidgetValue(combined);
+    setWidgetValue(updated);
     props.setCurrWidgetsDetails?.((prev) =>
       prev && prev.key === currWidgetsDetails?.key
-        ? { ...prev, options: { ...prev.options, response: combined } }
+        ? { ...prev, options: { ...prev.options, response: updated } }
         : prev
     );
     onChangeInput(
-      combined,
+      updated,
       currWidgetsDetails,
       xyPosition,
       props.index,
@@ -1073,37 +1067,11 @@ function WidgetsValueModal(props) {
       uniqueId
     );
   };
-  const handleCellsInput = (e, idx) => {
+  const handleCellsInput = (e) => {
+    const value = e.target.value;
     setIsShowValidation(false);
-    const val = e.target.value.slice(0, 1);
-    const updated = [...cellsValue];
-    updated[idx] = val;
-    updateCells(updated);
+    updateCells(value);
   };
-  const handleCellsKeyDown = (e, idx) => {
-    if (e.key === "Backspace" && !cellsValue[idx] && idx > 0) {
-      e.preventDefault();
-      cellRefs.current[idx - 1]?.focus();
-    }
-  };
-
-  const handleCellResize = (newCount) => {
-    let updated = [...cellsValue];
-    if (newCount > updated.length) {
-      updated = [...updated, ...Array(newCount - updated.length).fill("")];
-    } else if (newCount < updated.length) {
-      updated = updated.slice(0, newCount);
-    }
-    cellRefs.current = cellRefs.current.slice(0, newCount);
-    updateCells(updated);
-    setCellCount?.(currWidgetsDetails?.key, newCount);
-  };
-
-  // when focus leaves the cells widget, validate the input
-  const handleCellsBlur = (e, idx) => {
-    handleInputBlur();
-  };
-
   //function is used to show widgets on modal according to selected widget type checkbox/date/radio/drodown/textbox/signature/image
   const getWidgetType = (type) => {
     const isStampOrImage =
@@ -1355,6 +1323,7 @@ function WidgetsValueModal(props) {
         )
       }
     ];
+
     switch (type) {
       case "image":
       case "initials":
@@ -1459,24 +1428,18 @@ function WidgetsValueModal(props) {
             handleOnchangeTextBox={handleOnchangeTextBox}
             textInputcls={textInputcls}
             currWidgetsDetails={currWidgetsDetails}
-            handleInputBlur={handleInputBlur}
+            handleInputBlur={handleValidation}
           />
         );
       case cellsWidget:
         return (
-          <CellsWidget
-            isEnabled={true}
-            count={cellsValue.length}
-            height="100%"
-            value={cellsValue.join("")}
-            editable={true}
-            resizable={allowCellResize}
-            onChange={handleCellsInput}
-            onKeyDown={handleCellsKeyDown}
-            onBlur={handleCellsBlur}
-            onCellCountChange={allowCellResize ? handleCellResize : undefined}
-            inputRefs={cellRefs}
+          <CellsInput
+            cellsValue={widgetValue}
+            handleCellsInput={handleCellsInput}
+            textInputcls={textInputcls}
+            handleValidation={handleValidation}
             hint={hint}
+            count={currWidgetsDetails?.options?.cellCount || 0}
           />
         );
       case "dropdown":
@@ -1484,7 +1447,7 @@ function WidgetsValueModal(props) {
           <select
             className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content text-base-content w-full text-xs"
             id="myDropdown"
-            value={widgetValue}
+            value={widgetValue?.trim()}
             onChange={(e) => handleOnchangeTextBox(e)}
           >
             {/* Default/Title option */}
@@ -1493,8 +1456,8 @@ function WidgetsValueModal(props) {
               {t("choose-one")}
             </option>
             {currWidgetsDetails?.options?.values?.map((data, ind) => (
-              <option key={ind} value={data}>
-                {data}
+              <option key={ind} value={data?.trim()}>
+                {data?.trim()}
               </option>
             ))}
           </select>
@@ -1506,7 +1469,7 @@ function WidgetsValueModal(props) {
             type="text"
             placeholder={hint || widgetTypeTranslation}
             value={widgetValue}
-            onBlur={handleInputBlur}
+            onBlur={handleValidation}
             onChange={(e) => handleOnchangeTextBox(e)}
             className={textInputcls}
           />
@@ -1518,7 +1481,7 @@ function WidgetsValueModal(props) {
             placeholder={hint || widgetTypeTranslation}
             value={widgetValue}
             type="text"
-            onBlur={handleInputBlur}
+            onBlur={handleValidation}
             onChange={(e) => handleOnchangeTextBox(e)}
             className={textInputcls}
           />
@@ -1528,7 +1491,7 @@ function WidgetsValueModal(props) {
           <input
             ref={widgetRef}
             type="text"
-            onBlur={handleInputBlur}
+            onBlur={handleValidation}
             placeholder={hint || widgetTypeTranslation}
             value={widgetValue}
             onChange={(e) => handleOnchangeTextBox(e)}
@@ -1537,57 +1500,64 @@ function WidgetsValueModal(props) {
         );
       case "date":
         return (
-          <div className="flex flex-col">
-            <div className="border-[1px] opensigncss:border-gray-300 opensigndark:border-base-content text-base-content rounded-[2px] p-1 px-3">
-              <DatePicker
-                renderCustomHeader={({ date, changeYear, changeMonth }) => (
-                  <div className="flex justify-start ml-2 ">
-                    <select
-                      className="bg-transparent outline-none"
-                      value={months[getMonth(date)]}
-                      onChange={({ target: { value } }) =>
-                        changeMonth(months.indexOf(value))
-                      }
-                    >
-                      {months.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className="bg-transparent outline-none"
-                      value={getYear(date)}
-                      onChange={({ target: { value } }) => changeYear(value)}
-                    >
-                      {years.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                closeOnScroll={true}
-                selected={startDate}
-                onChange={(date) => handleOnDateChange(date)}
-                popperPlacement="top-end"
-                customInput={<ExampleCustomInput />}
-                dateFormat={
-                  selectDate
-                    ? selectDate?.format
-                    : currWidgetsDetails?.options?.validation?.format
-                      ? currWidgetsDetails?.options?.validation?.format
-                      : "MM/dd/yyyy"
-                }
-                portalId="root-portal"
-              />
-            </div>
-            <div className="flex justify-center">
-              <span className="text-gray-300 uppercase">
+          <div className="inline-flex flex-col items-center w-full">
+            {/* Input + format group */}
+            <div className="inline-flex flex-col items-center">
+              {/* Date input */}
+              <div className="border-[1px] opensigncss:border-gray-300 opensigndark:border-base-content text-base-content rounded-[2px] px-3 py-1 inline-flex">
+                <DatePicker
+                  renderCustomHeader={({ date, changeYear, changeMonth }) => (
+                    <div className="flex items-center gap-2 ml-2">
+                      <select
+                        className="bg-transparent outline-none"
+                        value={months[getMonth(date)]}
+                        onChange={({ target: { value } }) =>
+                          changeMonth(months.indexOf(value))
+                        }
+                      >
+                        {months.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className="bg-transparent outline-none"
+                        value={getYear(date)}
+                        onChange={({ target: { value } }) => changeYear(value)}
+                      >
+                        {years.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  closeOnScroll
+                  selected={startDate}
+                  onChange={handleOnDateChange}
+                  popperPlacement="top-end"
+                  customInput={<ExampleCustomInput />}
+                  dateFormat={
+                    selectDate?.format ||
+                    currWidgetsDetails?.options?.validation?.format ||
+                    "MM/dd/yyyy"
+                  }
+                  portalId="root-portal"
+                />
+              </div>
+              {/* Format */}
+              <span className="mt-1 text-gray-300 uppercase">
                 {currWidgetsDetails?.options?.validation?.format}
               </span>
             </div>
+            {/* hint */}
+            {hint && (
+              <div className="mt-2 flex items-center gap-2 text-sm">
+                <span>{hint}</span>
+              </div>
+            )}
           </div>
         );
       case "email":
@@ -1595,7 +1565,7 @@ function WidgetsValueModal(props) {
           <input
             ref={widgetRef}
             type="email"
-            onBlur={handleInputBlur}
+            onBlur={handleValidation}
             placeholder={hint || widgetTypeTranslation}
             value={widgetValue}
             onChange={(e) => handleOnchangeTextBox(e)}
@@ -1615,26 +1585,34 @@ function WidgetsValueModal(props) {
           <div
             className={`border-[1px] border-gray-300 rounded-[2px] pt-1 px-2.5 ${radioWrapperClass}`}
           >
-            {currWidgetsDetails?.options?.values.map((data, ind) => (
-              <div key={ind} className="text-base-content select-none-cls">
-                <label
-                  // htmlFor={`radio-${currWidgetsDetails?.key + ind}`}
-                  className="cursor-pointer flex items-center text-sm gap-1"
-                >
-                  <input
-                    id={`radio-${currWidgetsDetails?.key + ind}`}
-                    className={`op-radio op-radio-xs mt-1`}
-                    type="radio"
-                    value={data}
-                    checked={handleRadioCheck(data)}
-                    onChange={(e) => {
-                      handleCheckRadio(e.target.value);
-                    }}
-                  />
-                  <span>{data}</span>
-                </label>
-              </div>
-            ))}
+            {currWidgetsDetails?.options?.values.map((data, ind) => {
+              const label =
+                typeof data === "string"
+                  ? data
+                  : data && typeof data === "object" && data.name != null
+                    ? String(data.name)
+                    : "";
+              return (
+                <div key={ind} className="text-base-content select-none-cls">
+                  <label
+                    // htmlFor={`radio-${currWidgetsDetails?.key + ind}`}
+                    className="cursor-pointer flex items-center text-sm gap-1"
+                  >
+                    <input
+                      id={`radio-${currWidgetsDetails?.key + ind}`}
+                      className={`op-radio op-radio-xs mt-1`}
+                      type="radio"
+                      value={label}
+                      checked={handleRadioCheck(label?.trim())}
+                      onChange={(e) => {
+                        handleCheckRadio(e.target.value?.trim());
+                      }}
+                    />
+                    <span>{label}</span>
+                  </label>
+                </div>
+              );
+            })}
           </div>
         );
       case textWidget:
@@ -1761,7 +1739,7 @@ function WidgetsValueModal(props) {
     }
   };
   //function is used when user enter value in any textbox then check validation
-  const handleInputBlur = () => {
+  const handleValidation = () => {
     const validateType = currWidgetsDetails?.options?.validation?.type;
     let regexValidation;
     switch (validateType) {
@@ -1804,8 +1782,8 @@ function WidgetsValueModal(props) {
         prev.map((signer) => {
           if (signer.Id !== uniqueId) return signer;
 
-          const idx = signer?.placeHolder?.findIndex(
-            (p) => p.pageNumber === pageNumber
+          const idx = signer?.placeHolder?.findIndex((p) =>
+            p.pos?.some((w) => w.key === widgetKey)
           );
           if (idx === -1) return signer;
 
@@ -1861,9 +1839,7 @@ function WidgetsValueModal(props) {
       );
       //get current index of widget
       const currentIndex = editableWidgets.findIndex(
-        (item) =>
-          item.widget.key === currWidgetsDetails?.key &&
-          item.pageNumber === pageNumber
+        (item) => item.widget.key === currWidgetsDetails?.key
       );
       //get totoal widget length
       const totalItems = editableWidgets?.length;
@@ -1886,7 +1862,10 @@ function WidgetsValueModal(props) {
       }
 
       dispatch(setIsShowModal({ [nextWidgetDetails?.key]: true }));
-      props.setCurrWidgetsDetails(nextWidgetDetails);
+      props.setCurrWidgetsDetails({
+        ...nextWidgetDetails,
+        pageNumber: nextItem?.pageNumber
+      });
     }
 
   };
@@ -1926,10 +1905,10 @@ function WidgetsValueModal(props) {
         selectedCheckbox?.length > 0
       ) {
         return false;
-      } else if (widgetValue) {
-        return false;
-      } else {
+      } else if (isEmptyValue(widgetValue)) {
         return true;
+      } else {
+        return false;
       }
     } else {
       return true;
@@ -1962,7 +1941,7 @@ function WidgetsValueModal(props) {
     const editableWidgets = widgetsPosition?.placeHolder?.flatMap((page) =>
       page.pos
         .filter((widget) => !widget.options?.isReadOnly)
-        .map((widget) => widget)
+        .map((widget) => ({ ...widget, pageNumber: page.pageNumber }))
     );
     const getcurrentwidget = editableWidgets?.find(
       (data) => data?.key === currWidgetsDetails?.key
@@ -2027,7 +2006,9 @@ function WidgetsValueModal(props) {
             <>
               <div className="p-1 mt-3">
                 <span className="text-base text-base-content">
-                  {t("finish-mssg")}
+                  {
+                    t("finish-mssg")
+                  }
                 </span>
               </div>
               <div className="flex gap-3 items-center mt-4">
@@ -2036,7 +2017,9 @@ function WidgetsValueModal(props) {
                   className="op-btn op-btn-primary op-btn-sm px-4"
                   onClick={() => handleFinish()}
                 >
-                  {t("finish")}
+                  {
+                    t("finish")
+                  }
                 </button>
                 <button
                   type="button"

@@ -60,7 +60,7 @@ function Login() {
   }, [branding.logoUrl]);
 
   const handleUserExist = async () => {
-      checkUserExt();
+    checkUserExt();
   };
 
 

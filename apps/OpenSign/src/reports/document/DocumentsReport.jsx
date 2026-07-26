@@ -7,8 +7,10 @@ import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
 import Tooltip from "../../primitives/Tooltip";
 import ShareButton from "../../primitives/ShareButton";
+import DatePicker from "../../components/DatePicker";
 import Parse from "parse";
 import {
+  formatDateToDdMmmYyyy,
   copytoData,
   fetchUrl,
   getSignedUrl,
@@ -22,16 +24,10 @@ import {
   defaultMailBody,
   defaultMailSubject
 } from "../../constant/Utils";
-import EditorToolbar, {
-  module1,
-  formats
-} from "../../components/pdf/EditorToolbar";
-import ReactQuill from "react-quill-new";
-import "../../styles/quill.css";
 import BulkSendUi from "../../components/bulksend/BulkSendUi";
 import Loader from "../../primitives/Loader";
 import { serverUrl_fn } from "../../constant/appinfo";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import DownloadPdfZip from "../../primitives/DownloadPdfZip";
 import { useElSize } from "../../hook/useElSize";
 import PrefillWidgetModal from "../../components/pdf/PrefillWidgetsModal";
@@ -40,6 +36,7 @@ import * as utils from "../../utils";
 import { RenderReportCell } from "../../primitives/RenderReportCell";
 import CustomizeMail from "../../components/pdf/CustomizeMail";
 import { useSelector } from "react-redux";
+import EmailEditor from "../../components/emaileditor";
 
 const DocumentsReport = (props) => {
   const copyUrlRef = useRef(null);
@@ -63,17 +60,18 @@ const DocumentsReport = (props) => {
   const [alertMsg, setAlertMsg] = useState({ type: "success", message: "" });
   const [isResendMail, setIsResendMail] = useState({});
   const [mail, setMail] = useState({ subject: "", body: "" });
+  const [emailEditorType, setEmailEditorType] = useState("basic");
   const [userDetails, setUserDetails] = useState({});
   const [isNextStep, setIsNextStep] = useState({});
   const [isBulkSend, setIsBulkSend] = useState({});
-  const [templateDeatils, setTemplateDetails] = useState({});
+  const [templateDetails, setTemplateDetails] = useState({});
   const [placeholders, setPlaceholders] = useState([]);
   const [isLoader, setIsLoader] = useState({});
   const [isModal, setIsModal] = useState({});
   const [reason, setReason] = useState("");
   const [isDownloadModal, setIsDownloadModal] = useState(false);
   const [signatureType, setSignatureType] = useState([]);
-  const [expiryDate, setExpiryDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState(null);
   const Extand_Class = localStorage.getItem("Extand_Class");
   const extClass = Extand_Class && JSON.parse(Extand_Class);
   const [renameDoc, setRenameDoc] = useState("");
@@ -89,8 +87,12 @@ const DocumentsReport = (props) => {
   const [isPrefillModal, setIsPrefillModal] = useState({});
   const [isSubmit, setIsSubmit] = useState(false);
   const [error, setError] = useState("");
+  const [resendErrMail, setResendErrMail] = useState("");
   const [isMailModal, setIsMailModal] = useState(false);
-  const [customizeMail, setCustomizeMail] = useState({ body: "", subject: "" });
+  const [customizeMail, setCustomizeMail] = useState({
+    body: { basic: "", advanced: "" },
+    subject: ""
+  });
   const [defaultMail, setDefaultMail] = useState({ body: "", subject: "" });
   const [currUserId, setCurrUserId] = useState(false);
   const [documentDetails, setDocumentDetails] = useState();
@@ -210,9 +212,13 @@ const DocumentsReport = (props) => {
                 subject;
           const userBody =
                 body;
+          const finalBody = userBody || defaultMailBody;
+          const emailEditorType =
+                tenantDetails?.EmailEditorType;
+          setEmailEditorType(emailEditorType?.request || "basic");
           setCustomizeMail({
-            subject: userSubject ?? defaultMailSubject,
-            body: userBody ?? defaultMailBody
+            subject: userSubject || defaultMailSubject,
+            body: { basic: finalBody, advanced: finalBody }
           });
           setDefaultMail({ subject: userSubject, body: userBody });
           return filterSignTypes;
@@ -261,10 +267,10 @@ const DocumentsReport = (props) => {
     async (templateRes, placeholder, signer) => {
       setIsPrefillModal({});
       const res = await createDocument(
-        [templateRes || templateDeatils],
+        [templateRes || templateDetails],
         placeholder || xyPosition,
         signer || signerList,
-        templateRes?.URL || templateDeatils?.URL,
+        templateRes?.URL || templateDetails?.URL,
       );
       if (res.status === "success") {
         navigate(`/placeHolderSign/${res.id}`, {
@@ -277,8 +283,8 @@ const DocumentsReport = (props) => {
   );
   const handleUseTemplate = async (templateId, item) => {
     try {
-      const templateDeatils = await fetchTemplate(templateId);
-      const templateData = templateDeatils.data && templateDeatils.data.result;
+      const templateRes = await fetchTemplate(templateId);
+      const templateData = templateRes.data && templateRes.data.result;
       if (!templateData.error) {
         setTemplateDetails(templateData);
         setXyPosition(templateData?.Placeholders);
@@ -327,6 +333,9 @@ const DocumentsReport = (props) => {
       setError(isPrefill ? t("fix-resend-error") : "");
       setIsModal({ [`recreatedocument_${item.objectId}`]: true });
     } else if (act.action === "extendexpiry") {
+      setExpiryDate(
+        item?.ExpiryDate?.iso ? new Date(item?.ExpiryDate?.iso) : null
+      );
       setIsModal({ [`extendexpiry_${item.objectId}`]: true });
     }
   });
@@ -436,29 +445,19 @@ const DocumentsReport = (props) => {
     const jsonSender = JSON.parse(senderUser);
     setIsRevoke({});
     setActLoader({ [`${item.objectId}`]: true });
-    const data = {
-      IsDeclined: true,
-      DeclineReason: reason,
-      DeclineBy: {
-        __type: "Pointer",
-        className: "_User",
-        objectId: jsonSender?.objectId
-      }
+    const params = {
+      docId: item.objectId,
+      reason: reason,
+      userId: jsonSender?.objectId,
     };
     await axios
-      .put(
-        `${localStorage.getItem("baseUrl")}classes/contracts_Document/${
-          item.objectId
-        }`,
-        data,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Parse-Application-Id": localStorage.getItem("parseAppId"),
-            "X-Parse-Session-Token": localStorage.getItem("accesstoken")
-          }
+      .post(`${localStorage.getItem("baseUrl")}functions/declinedoc`, params, {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Parse-Application-Id": localStorage.getItem("parseAppId"),
+          "X-Parse-Session-Token": localStorage.getItem("accesstoken")
         }
-      )
+      })
       .then(async (result) => {
         const res = result.data;
         if (res) {
@@ -519,6 +518,14 @@ const DocumentsReport = (props) => {
     }
   };
 
+  // `handleSwitch` is used to change email editor from basic => advanced or vice versa
+  const handleSwitch = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const editor = emailEditorType === "basic" ? "advanced" : "basic";
+    setEmailEditorType(editor);
+  };
+
   // `handleSubjectChange` is used to add or change subject of resend mail
   const handleSubjectChange = (subject, doc) => {
     const encodeBase64 = userDetails?.objectId
@@ -536,9 +543,9 @@ const DocumentsReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: userDetails?.Name || "",
       receiver_email: userDetails?.Email,
@@ -552,7 +559,7 @@ const DocumentsReport = (props) => {
   };
 
   // `handlebodyChange` is used to add or change body of resend mail
-  const handlebodyChange = (body, doc) => {
+  const handlebodyChange = (body, doc, type) => {
     const encodeBase64 = userDetails?.objectId
       ? btoa(`${doc.objectId}/${userDetails.Email}/${userDetails.objectId}`)
       : btoa(`${doc.objectId}/${userDetails.Email}`);
@@ -568,9 +575,9 @@ const DocumentsReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: userDetails?.Name || "",
       receiver_email: userDetails?.Email || "",
@@ -582,7 +589,10 @@ const DocumentsReport = (props) => {
     const res = replaceMailVaribles("", body, variables);
 
     if (body) {
-      setMail((prev) => ({ ...prev, body: res.body }));
+      setMail((prev) => ({
+        ...prev,
+        body: { ...prev.body, [type]: res.body }
+      }));
     }
   };
   // `handleNextBtn` is used to open edit mail template screen in resend mail modal
@@ -612,9 +622,9 @@ const DocumentsReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: user?.signerPtr?.Name || "",
       receiver_email: user?.email ? user?.email : user?.signerPtr?.Email,
@@ -623,6 +633,7 @@ const DocumentsReport = (props) => {
       company_name: doc?.ExtUserPtr?.Company || "",
       signing_url: signPdf
     };
+
     const subject =
       doc?.RequestSubject ||
       doc?.ExtUserPtr?.TenantId?.RequestSubject ||
@@ -632,7 +643,17 @@ const DocumentsReport = (props) => {
       doc?.ExtUserPtr?.TenantId?.RequestBody ||
       `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body><p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}} has requested you to review and sign <b>"{{document_title}}"</b>.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process,  please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br></body> </html>`;
     const res = replaceMailVaribles(subject, body, variables);
-    setMail((prev) => ({ ...prev, subject: res.subject, body: res.body }));
+    setMail((prev) => ({
+      ...prev,
+      subject: res.subject,
+      body: { basic: res.body, advanced: res.body }
+    }));
+    setEmailEditorType(
+      doc?.EmailEditorType?.request ||
+        doc?.ExtUserPtr?.EmailEditorType?.request ||
+        doc?.ExtUserPtr?.TenantId?.EmailEditorType?.request ||
+        "basic"
+    );
     setIsNextStep({ [user.Id]: true });
   };
   const handleResendMail = utils.withSessionValidation(async (e, doc, user) => {
@@ -645,15 +666,14 @@ const DocumentsReport = (props) => {
       sessionToken: localStorage.getItem("accesstoken")
     };
     let params = {
-      replyto:
-        doc?.ExtUserPtr?.Email ||
-        "",
+      replyto: doc?.SenderMail || doc?.ExtUserPtr?.Email || "",
       extUserId: doc?.ExtUserPtr?.objectId,
       recipient: userDetails?.Email,
       subject: mail.subject,
       from:
+        doc?.SenderName ||
         doc?.ExtUserPtr?.Email,
-      html: mail.body
+      html: emailEditorType === "basic" ? mail.body.basic : mail.body.advanced
     };
     try {
       const res = await axios.post(url, params, { headers: headers });
@@ -662,11 +682,11 @@ const DocumentsReport = (props) => {
         setIsResendMail({});
       }
       else {
-        showAlert("danger", t("something-went-wrong-mssg"));
+        setResendErrMail(t("something-went-wrong-mssg"));
       }
     } catch (err) {
       console.error("sendmail error", err);
-      showAlert("danger", t("something-went-wrong-mssg"));
+      setResendErrMail(t("something-went-wrong-mssg"));
     } finally {
       setIsNextStep({});
       setUserDetails({});
@@ -711,9 +731,13 @@ const DocumentsReport = (props) => {
     e.preventDefault();
     e.stopPropagation();
     if (expiryDate) {
-      const oldExpiryDate = new Date(item?.ExpiryDate?.iso);
+      const oldExpiryDate = item?.ExpiryDate?.iso
+        ? new Date(item?.ExpiryDate?.iso)
+        : null;
       const newExpiryDate = new Date(expiryDate);
-      if (newExpiryDate > oldExpiryDate) {
+      const hasOldExpiry =
+        oldExpiryDate && !Number.isNaN(oldExpiryDate.getTime());
+      if (!hasOldExpiry || newExpiryDate > oldExpiryDate) {
         setActLoader({ [`${item.objectId}`]: true });
         const updateExpiryDate = new Date(expiryDate).toISOString();
         const expiryIsoFormat = { iso: updateExpiryDate, __type: "Date" };
@@ -928,8 +952,8 @@ const DocumentsReport = (props) => {
       signerList,
       setIsPrefillModal,
       scale,
-      templateDeatils?.URL,
-      [templateDeatils],
+      templateDetails?.URL,
+      [templateDetails],
       prefillImg,
       extClass?.[0]?.UserId?.objectId,
     );
@@ -946,7 +970,7 @@ const DocumentsReport = (props) => {
         timeInMiliSec
       );
     } else if (res?.status === "unattach signer") {
-      showAlert("danger", "please attach all role to signer");
+      showAlert("danger", t("attach-all-role-to-signer"));
     } else if (res?.status === "success") {
       setDocumentId(res.id);
       setActLoader({});
@@ -958,6 +982,9 @@ const DocumentsReport = (props) => {
         console.error("fetchTenantDetails error", e);
         alert(t("user-not-exist"));
       }
+    } else if (res?.status === "error") {
+      const message = res?.message || "something-went-wrong-mssg";
+      showAlert("danger", t(message));
     }
     setIsSubmit(false);
     setActLoader({});
@@ -982,7 +1009,10 @@ const DocumentsReport = (props) => {
         `${documentId}/${signerMail[i].Email}/${objectId}/${sendMail}`
       );
       let signPdf = `${hostUrl}/login/${encodeBase64}`;
-      shareLinkList.push({ signerEmail: signerMail[i].Email, url: signPdf });
+      shareLinkList.push({
+        signerEmail: signerMail[i].Email,
+        url: signPdf
+      });
     }
     return shareLinkList.map((data, ind) => {
       return (
@@ -1099,6 +1129,31 @@ const DocumentsReport = (props) => {
               >
                 <i className="fa-light fa-table-columns"></i>
               </button>
+            )}
+            {props?.ReportName === "In-progress documents" && (
+              <div className="op-dropdown op-dropdown-end">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="focus:outline-none rounded-md text-[18px]"
+                >
+                  <i className="fa-light fa-filter"></i>
+                </div>
+                <ul
+                  tabIndex="-1"
+                  className="op-dropdown-content op-menu op-menu-sm shadow-black/20 bg-base-100 text-base-content rounded-box z-[70] w-52 p-2 shadow-sm"
+                >
+                  <li onClick={() => props.handleSignerStatusFilter("all")}>
+                    <a>{t("all-signer-status")}</a>
+                  </li>
+                  <li onClick={() => props.handleSignerStatusFilter("viewed")}>
+                    <a>{t("viewed")}</a>
+                  </li>
+                  <li onClick={() => props.handleSignerStatusFilter("signed")}>
+                    <a>{t("signed")}</a>
+                  </li>
+                </ul>
+              </div>
             )}
           </div>
         </div>
@@ -1388,23 +1443,37 @@ const DocumentsReport = (props) => {
                           handleClose={handleCloseModal}
                         >
                           <form
-                            className="px-4 py-2 flex flex-col"
+                            className="px-4 py-2 flex flex-col w-full"
                             onSubmit={(e) => handleUpdateExpiry(e, item)}
                           >
+                            <div className="text-sm mb-2">
+                              <span className="font-medium mr-1">
+                                {t("current-expiry-date")}:
+                              </span>
+                              {item?.ExpiryDate?.iso
+                                ? formatDateToDdMmmYyyy(
+                                    new Date(item?.ExpiryDate?.iso)
+                                  )
+                                : t("no-data")}
+                            </div>
                             <label className="mr-2">
                               {t("expiry-date")} {"(dd-mm-yyyy)"}
                             </label>
-                            <input
-                              type="date"
-                              className="rounded-full mb-2 bg-base-300 w-full px-4 py-2 text-base-content border-2 hover:border-spacing-2"
-                              defaultValue={
-                                item?.ExpiryDate?.iso?.split("T")?.[0]
-                              }
-                              onChange={(e) => {
-                                setExpiryDate(e.target.value);
-                              }}
-                            />
-                            <div className="flex justify-start mb-1">
+                            <div className="w-full">
+                              <DatePicker
+                                selectDate={{
+                                  date: expiryDate,
+                                  format: "dd-MM-yyyy"
+                                }}
+                                format="dd-MM-yyyy"
+                                onChange={(date) => setExpiryDate(date)}
+                                handleClear={() => setExpiryDate(null)}
+                                showLabel={false}
+                                showClear={false}
+                                dateClassName="text-sm md:text-base"
+                              />
+                            </div>
+                            <div className="flex justify-start mb-1 mt-3">
                               <button
                                 type="submit"
                                 className="op-btn op-btn-primary"
@@ -1459,12 +1528,30 @@ const DocumentsReport = (props) => {
                               <Loader />
                             </div>
                           ) : (
-                            <BulkSendUi
-                              Placeholders={placeholders}
-                              item={templateDeatils}
-                              handleClose={handleQuickSendClose}
-                              signatureType={signatureType}
-                            />
+                            <>
+                              {!extClass?.[0]?.UserId?.emailVerified ? (
+                                <div className="mx-[20px] mt-[15px] mb-[20px]">
+                                  <Trans
+                                    i18nKey="email-not-verified-send"
+                                    components={{
+                                      1: (
+                                        <Link
+                                          to="/profile"
+                                          className="text-blue-700 underline cursor-pointer"
+                                        />
+                                      )
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <BulkSendUi
+                                  Placeholders={placeholders}
+                                  item={templateDetails}
+                                  handleClose={handleQuickSendClose}
+                                  signatureType={signatureType}
+                                />
+                              )}
+                            </>
                           )}
                         </ModalUi>
                       )}
@@ -1565,9 +1652,9 @@ const DocumentsReport = (props) => {
                               )?.map((user) => (
                                 <React.Fragment key={user.Id}>
                                   {isNextStep[user.Id] && (
-                                    <div className="relative ">
+                                    <div className="relative">
                                       {actLoader[user.Id] && (
-                                        <div className="absolute w-full h-full flex justify-center items-center bg-black bg-opacity-30 z-30">
+                                        <div className="absolute w-full h-full flex justify-center items-center bg-black bg-opacity-30 z-[60]">
                                           <Loader />
                                         </div>
                                       )}
@@ -1583,60 +1670,70 @@ const DocumentsReport = (props) => {
                                             message={t("resend-mail-help")}
                                           />
                                         </div>
-                                        <div>
-                                          <label
-                                            className="text-xs ml-1"
-                                            htmlFor="mailsubject"
-                                          >
-                                            {t("subject")}{" "}
-                                          </label>
-                                          <input
-                                            id="mailsubject"
-                                            className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                                            value={mail.subject}
-                                            onChange={(e) =>
-                                              handleSubjectChange(
-                                                e.target.value,
-                                                item
-                                              )
-                                            }
-                                            onInvalid={(e) =>
-                                              e.target.setCustomValidity(
-                                                t("input-required")
-                                              )
-                                            }
-                                            onInput={(e) =>
-                                              e.target.setCustomValidity("")
-                                            }
-                                            required
-                                          />
+                                        <div className="w-full flex flex-col gap-2 text-base-content relative">
+                                          <div>
+                                            <label
+                                              className="text-xs ml-1"
+                                              htmlFor="mailsubject"
+                                            >
+                                              {t("subject")}{" "}
+                                            </label>
+                                            <input
+                                              id="mailsubject"
+                                              className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                                              value={mail.subject}
+                                              onChange={(e) =>
+                                                handleSubjectChange(
+                                                  e.target.value,
+                                                  item
+                                                )
+                                              }
+                                              onInvalid={(e) =>
+                                                e.target.setCustomValidity(
+                                                  t("input-required")
+                                                )
+                                              }
+                                              onInput={(e) =>
+                                                e.target.setCustomValidity("")
+                                              }
+                                              required
+                                            />
+                                          </div>
+                                          <div>
+                                            <label
+                                              className="flex justify-between text-sm ml-1"
+                                              htmlFor="mailbody"
+                                            >
+                                              <span>{t("body")} </span>
+                                              <button
+                                                className="op-link op-link-primary"
+                                                onClick={(e) => handleSwitch(e)}
+                                              >
+                                                {emailEditorType === "basic"
+                                                  ? t("switch-to-advanced")
+                                                  : t("switch-to-basic")}
+                                              </button>
+                                            </label>
+                                            <EmailEditor
+                                              type={emailEditorType}
+                                              values={mail.body || ""}
+                                              onChange={(value, type) =>
+                                                handlebodyChange(
+                                                  value,
+                                                  item,
+                                                  type
+                                                )
+                                              }
+                                              smallscreen
+                                            />
+                                          </div>
                                         </div>
-                                        <div>
-                                          <label
-                                            className="text-xs ml-1"
-                                            htmlFor="mailbody"
+                                          <button
+                                            type="submit"
+                                            className="op-btn op-btn-primary"
                                           >
-                                            {t("body")}{" "}
-                                          </label>
-                                          <EditorToolbar containerId="toolbar1" />
-                                          <ReactQuill
-                                            id="mailbody"
-                                            theme="snow"
-                                            value={mail.body || ""}
-                                            placeholder="add body of email "
-                                            modules={module1}
-                                            formats={formats}
-                                            onChange={(value) =>
-                                              handlebodyChange(value, item)
-                                            }
-                                          />
-                                        </div>
-                                        <button
-                                          type="submit"
-                                          className="op-btn op-btn-primary"
-                                        >
-                                          {t("resend")}
-                                        </button>
+                                            {t("resend")}
+                                          </button>
                                       </form>
                                     </div>
                                   )}
@@ -1720,11 +1817,11 @@ const DocumentsReport = (props) => {
                     <img
                       className="w-full h-full object-contain"
                       src={pad}
-                      alt={t("no-data-avaliable")}
+                      alt={t("no-data-available")}
                     />
                   </div>
                   <div className="text-sm font-semibold">
-                    {t("no-data-avaliable")}
+                    {t("no-data-available")}
                   </div>
                 </>
               )}
@@ -1761,6 +1858,30 @@ const DocumentsReport = (props) => {
             </button>
           )}
         </div>
+        <ModalUi
+          isOpen={resendErrMail}
+          id="error-modal"
+          title={t("error")}
+          handleClose={() => setResendErrMail("")}
+        >
+          <div className="mx-[20px] mb-[20px] mt-[10px]">
+            {resendErrMail === "emailnotverified" ? (
+              <Trans
+                i18nKey="email-not-verified-send"
+                components={{
+                  1: (
+                    <Link
+                      to="/profile"
+                      className="text-blue-700 underline cursor-pointer"
+                    />
+                  )
+                }}
+              />
+            ) : (
+              <p>{resendErrMail}</p>
+            )}
+          </div>
+        </ModalUi>
         <CustomizeMail
           setIsMailModal={setIsMailModal}
           setCustomizeMail={setCustomizeMail}
@@ -1775,6 +1896,9 @@ const DocumentsReport = (props) => {
           handleShareList={handleShareList}
           setDocumentDetails={setDocumentDetails}
           handleClose={handleCloseMail}
+          copyUrlRef={copyUrlRef}
+          emailEditorType={emailEditorType}
+          setEmailEditorType={setEmailEditorType}
         />
         <ModalUi
           isOpen={isSend}
@@ -1783,7 +1907,9 @@ const DocumentsReport = (props) => {
               ? t("mails-sent")
               : mailStatus === "quotareached"
                 ? t("quota-mail-head")
-                : t("mail-not-delivered")
+                : mailStatus === "emailnotverified"
+                  ? t("email-not-verified-head")
+                  : t("mail-not-delivered")
           }
           handleClose={() => {
             setIsSend(false);
@@ -1811,6 +1937,20 @@ const DocumentsReport = (props) => {
               <div className="flex flex-col gap-y-3">
                 <div className="my-3">{handleShareList()}</div>
               </div>
+            ) : mailStatus === "emailnotverified" ? (
+              <p>
+                <Trans
+                  i18nKey="email-not-verified-send"
+                  components={{
+                    1: (
+                      <a
+                        href="/profile"
+                        className="text-blue-700 underline cursor-pointer"
+                      />
+                    )
+                  }}
+                />
+              </p>
             ) : (
               <div className="mb-[10px]">
                 {mailStatus === "dailyquotareached" ? (
@@ -1829,7 +1969,9 @@ const DocumentsReport = (props) => {
             {mailStatus !== "quotareached" && (
               <div
                 className={
-                  mailStatus === "success" ? "flex justify-center mt-1" : ""
+                  mailStatus === "success" || mailStatus === "emailnotverified"
+                    ? "flex justify-center mt-1"
+                    : ""
                 }
               >
                 {currUserId && (

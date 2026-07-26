@@ -1,4 +1,5 @@
 import { appName, emailLogoUrl, escapeHtml, contactEmail } from '../../Utils.js';
+import sendSystemMail from './sendSystemMail.js';
 
 async function sendDeclineMail(doc, publicUrl, userId, reason) {
   try {
@@ -38,7 +39,7 @@ async function sendDeclineMail(doc, publicUrl, userId, reason) {
       pdfName: pdfName,
       html: body,
     };
-    await Parse.Cloud.run('sendmailv3', params, { useMasterKey: true });
+    await sendSystemMail({ params });
   } catch (err) {
     console.log('err in sendnotifymail', err);
   }
@@ -55,6 +56,8 @@ export default async function declinedocument(request) {
   try {
     const docCls = new Parse.Query('contracts_Document');
     docCls.include('ExtUserPtr.TenantId,Placeholders.signerPtr,Signers');
+    docCls.notEqualTo('IsCompleted', true);
+    docCls.notEqualTo('IsArchive', true);
     const updateDoc = await docCls.get(docId, { useMasterKey: true });
     if (updateDoc) {
       const _doc = JSON.parse(JSON.stringify(updateDoc));
@@ -81,12 +84,15 @@ export default async function declinedocument(request) {
       }
 
       const isEnableOTP = updateDoc?.get('IsEnableOTP') || false;
+      const isCreator = _doc?.CreatedBy?.objectId === userId;
       if (!isEnableOTP) {
         updateDoc.set('IsDeclined', true);
         updateDoc.set('DeclineReason', reason);
         updateDoc.set('DeclineBy', declineBy);
         await updateDoc.save(null, { useMasterKey: true });
-        sendDeclineMail(_doc, publicUrl, userId, reason).catch(err => console.error('[declinedocument] sendDeclineMail error:', err.message));
+        if (!isCreator) {
+          sendDeclineMail(_doc, publicUrl, userId, reason).catch(err => console.error('[declinedocument] sendDeclineMail error:', err.message));
+        }
         return 'document declined';
       } else {
         if (!request?.user) {
@@ -96,7 +102,12 @@ export default async function declinedocument(request) {
         updateDoc.set('DeclineReason', reason);
         updateDoc.set('DeclineBy', declineBy);
         await updateDoc.save(null, { useMasterKey: true });
-        sendDeclineMail(_doc, publicUrl, userId, reason).catch(err => console.error('[declinedocument] sendDeclineMail error:', err.message));
+        // Re-derive against the authenticated session (intentional shadow of the
+        // param-derived isCreator above) — the OTP branch requires a session.
+        const isCreatorAuthed = _doc?.CreatedBy?.objectId === request?.user?.id;
+        if (!isCreatorAuthed) {
+          sendDeclineMail(_doc, publicUrl, userId, reason).catch(err => console.error('[declinedocument] sendDeclineMail error:', err.message));
+        }
         return 'document declined';
       }
     } else {

@@ -10,12 +10,16 @@ export default function reportJson(id, currentUserId) {
     'ExtUserPtr.Name',
     'ExtUserPtr.Email',
     'ExtUserPtr.DownloadFilenameFormat',
+    'ExtUserPtr.Company',
+    'ExtUserPtr.Phone',
     'Signers.Name',
     'Signers.Email',
     'Signers.Phone',
     'Placeholders',
     'TemplateId',
     'ExpiryDate',
+    'SenderName',
+    'SenderMail',
   ];
   const inProgressKeys = [
     ...commanKeys,
@@ -23,8 +27,10 @@ export default function reportJson(id, currentUserId) {
     'SendMail',
     'RequestBody',
     'RequestSubject',
+    'EmailEditorType',
     'ExtUserPtr.TenantId.RequestBody',
     'ExtUserPtr.TenantId.RequestSubject',
+    'ExtUserPtr.TenantId.EmailEditorType',
     'DocSentAt',
   ];
   const filterKeys = [

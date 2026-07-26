@@ -11,7 +11,7 @@ import {
   widgets,
   drawWidget
 } from "../../constant/Utils";
-import { useTranslation } from "react-i18next";  
+import { useTranslation } from "react-i18next";
 import { useWidgetDrag } from "../../hook/useWidgetDrag";
 
 function WidgetComponent(props) {
@@ -36,7 +36,7 @@ function WidgetComponent(props) {
     { id: 14, text: "dropdown" },
     { id: 15, text: radioButtonWidget },
     { id: 16, text: "image" },
-    { id: 17, text: drawWidget }
+    { id: 17, text: drawWidget },
   ];
 
   // Create all drag refs in one go
@@ -90,13 +90,25 @@ function WidgetComponent(props) {
   );
   const selfSignWidgets = widgetList.filter(
     (data) =>
-      !["dropdown", radioButtonWidget, textInputWidget,drawWidget].includes(data.type)
+      ![
+        "dropdown",
+        radioButtonWidget,
+        textInputWidget,
+        drawWidget,
+      ].includes(data.type)
   );
   //if user select prefill role then allow only date,image,text,checkbox,radio,dropdownAdd commentMore actions
   //dropdown widget should only be show in template flow
   const prefillAllowWidgets = widgetList.filter((data) =>
     (props.isPrefillDropdown ? ["dropdown"] : [])
-      .concat([radioButtonWidget, textWidget, "date", "image", "checkbox",drawWidget])
+      .concat([
+        radioButtonWidget,
+        textWidget,
+        "date",
+        "image",
+        "checkbox",
+        drawWidget
+      ])
       .includes(data.type)
   );
   //function to show widget on the base of conditionAdd commentMore actions
@@ -112,7 +124,9 @@ function WidgetComponent(props) {
         return unlogedInUserWidgets;
       }
     } else if (props?.roleName !== "prefill") {
-      return widgetList.filter((data) => ![textWidget,drawWidget].includes(data.type));
+      return widgetList.filter(
+        (data) => ![textWidget, drawWidget].includes(data.type)
+      );
     }
   };
   const handleSelectRecipient = () => {
@@ -130,7 +144,12 @@ function WidgetComponent(props) {
       return name;
     }
   };
-
+  const handleBlockColor = () => {
+    const widgetBoxColor = props?.signerPos?.find(
+      (x) => x?.Id === props?.uniqueId
+    )?.blockColor;
+    return widgetBoxColor;
+  };
   return (
     <>
       {isMobile ? (
@@ -147,7 +166,7 @@ function WidgetComponent(props) {
                       backgroundColor:
                         props.roleName === "prefill"
                           ? "#edf6fc"
-                          : props?.blockColor || "#edf6fc"
+                          : handleBlockColor() || "#edf6fc"
                     }}
                   >
                     <option value={handleSelectRecipient()}>

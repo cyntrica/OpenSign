@@ -1,4 +1,5 @@
 import { appName, emailLogoUrl, emailRegex, escapeHtml, contactEmail } from '../../Utils.js';
+import sendMailWithAttachment from './sendMailWithAttachment.js';
 
 export default async function forwardDoc(request) {
   try {
@@ -27,9 +28,9 @@ export default async function forwardDoc(request) {
       const docName = _docRes.Name;
       const extUserId = _docRes?.ExtUserPtr?.objectId;
       const TenantAppName = appName;
-      const from = _docRes?.ExtUserPtr?.Email;
-      const replyTo = _docRes?.ExtUserPtr?.Email;
-      const senderName = _docRes?.ExtUserPtr?.Name;
+      const from = _docRes?.SenderName || _docRes?.ExtUserPtr?.Email;
+      const replyTo = _docRes?.SenderMail || _docRes?.ExtUserPtr?.Email;
+      const senderName = _docRes?.SenderName || _docRes?.ExtUserPtr?.Name;
 
       // Validate recipient email addresses
       const validRecipients = recipients.filter(r => emailRegex.test(r.email || r));
@@ -62,19 +63,18 @@ export default async function forwardDoc(request) {
                 `</div></div><div><p>This is an automated email from ${escapeHtml(TenantAppName)}. For any queries regarding this email, please contact the sender ${escapeHtml(replyTo)} directly. ` +
                 `If you think this email is inappropriate or spam, you may file a complaints with ${escapeHtml(TenantAppName)}${opurl}.</p></div></div></body></html>`,
             };
-            // Call the mail function in-process instead of an internal HTTP self-call
-            // that carried the master key over the wire.
-            return Parse.Cloud.run('sendmailv3', params, { useMasterKey: true });
+            return sendMailWithAttachment(params);
           })
         );
-        // sendmailv3 resolves with { status: 'error' } rather than throwing, so a
-        // settled promise is not by itself proof of delivery — check the status too.
+        // sendMailWithAttachment resolves with { status: 'error' } rather than throwing,
+        // so a settled promise is not by itself proof of delivery — check the status too.
         const succeeded = results.filter(
           r => r.status === 'fulfilled' && r.value?.status === 'success'
         ).length;
         const failed = validRecipients.length - succeeded;
         if (failed > 0) console.warn(`[ForwardDoc] ${failed}/${validRecipients.length} emails failed`);
-        return { success: true, sent: succeeded, failed };
+        // Client (EmailComponent.jsx) checks result.status === 'success'
+        return { status: succeeded > 0 ? 'success' : 'error', sent: succeeded, failed };
       } catch (error) {
         const msg = error?.message || 'Something went wrong.';
         throw new Parse.Error(400, msg);

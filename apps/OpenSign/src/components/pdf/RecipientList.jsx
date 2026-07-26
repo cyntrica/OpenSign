@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { useTranslation } from "react-i18next";
 import {
   color,
   darkenColor,
@@ -10,6 +11,7 @@ import {
 const cursor =
   "cursor-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAASElEQVR4nGNgwAMkJSUbpKSkOvCpIaT5PxSTbogUQjMYMwxeIIXmVFIxA8UGDDyQGg0DnIDi6JKUlCxHMqCeZAOghjSAMD5FAKfeaURdUFxCAAAAAElFTkSuQmCC'),_pointer]";
 const RecipientList = (props) => {
+  const { t } = useTranslation();
   const [animationParent] = useAutoAnimate();
   const [isHover, setIsHover] = useState();
   const [isPrefill, setIsPrefill] = useState(false);
@@ -67,7 +69,7 @@ const RecipientList = (props) => {
     props?.setIsSelectId(index);
     props?.setUniqueId(remainingItems[index]?.Id);
     props?.setRoleName(remainingItems[index]?.Role);
-    props?.setBlockColor(obj.blockColor);
+    props.setBlockColor?.(obj?.blockColor);
     //change order of placeholder's list using sorting method
     //`remainingItems` is correct order of signers after change order
     const changeOrderSignerList = props?.signerPos.sort((a, b) => {
@@ -86,7 +88,7 @@ const RecipientList = (props) => {
     props?.setIsSelectId(index);
     props?.setUniqueId(obj.Id);
     props?.setRoleName(obj.Role);
-    props?.setBlockColor(obj?.blockColor);
+    props.setBlockColor?.(obj?.blockColor);
     props?.handleModal && props?.handleModal();
     setIsPrefill(prefill ?? false);
     props.setIsTour && props?.setIsTour(false);

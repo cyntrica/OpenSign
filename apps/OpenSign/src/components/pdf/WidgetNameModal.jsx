@@ -9,6 +9,7 @@ import {
   textWidget
 } from "../../constant/Utils";
 import {
+  getRegexForType,
   widgetNamesArr
 } from "../../utils";
 import { fontColorArr, fontsizeArr } from "../../constant/Utils";
@@ -27,6 +28,7 @@ const WidgetNameModal = (props) => {
     isReadOnly: false,
     cellCount: 5,
   });
+  const [rotation, setRotation] = useState(0);
   const [isValid, setIsValid] = useState(true);
   const statusArr = ["Required", "Optional"];
   const [signatureType, setSignatureType] = useState([]);
@@ -80,6 +82,7 @@ const WidgetNameModal = (props) => {
         cellCount: props.defaultdata?.options?.cellCount || 5,
       });
       setLastSubmittedName(props.defaultdata?.options?.name || "");
+      setRotation(props.defaultdata?.options?.rotation || 0);
     } else {
       setFormdata({
         ...formdata,
@@ -87,6 +90,7 @@ const WidgetNameModal = (props) => {
         cellCount: props.defaultdata?.options?.cellCount || 5,
       });
       setLastSubmittedName(props.defaultdata?.options?.name || "");
+      setRotation(props.defaultdata?.options?.rotation || 0);
     }
 
     if (signTypes.length > 0) {
@@ -122,7 +126,7 @@ const WidgetNameModal = (props) => {
         } else if (isDefaultSignTypeOnly) {
           alert(t("expect-default-one-signature-type"));
         } else {
-          const data = { ...formdata, signatureType };
+          const data = { ...formdata, signatureType, rotation };
           props.handleData(data, props.defaultdata?.type);
         }
       } else {
@@ -153,6 +157,7 @@ const WidgetNameModal = (props) => {
         textvalidate: "",
         cellCount: 5,
       });
+      setRotation(0);
       setSignatureType(signTypes);
     }
   };
@@ -183,7 +188,7 @@ const WidgetNameModal = (props) => {
 
   const handledefaultChange = (e) => {
     if (formdata.textvalidate) {
-      const regexObject = RegexParser(handleValidation(formdata.textvalidate));
+      const regexObject = RegexParser(getRegexForType(formdata.textvalidate));
       const isValidate = regexObject?.test(e.target.value);
       setIsValid(isValidate);
     } else {
@@ -196,22 +201,6 @@ const WidgetNameModal = (props) => {
 
     setFormdata({ ...formdata, [e.target.name]: val });
   };
-
-  function handleValidation(type) {
-    switch (type) {
-      case "email":
-        return "/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+.[a-zA-Z]{2,}$/";
-      case "number":
-        return "^\\d+(?:\\.\\d+)?$"; // "/^\\d+$/";
-      case "text":
-        //allow space in text regex
-        return "/^[a-zA-Z ]+$/";
-      case "ssn":
-        return "/^(?!000|666|9\\d{2})\\d{3}-(?!00)\\d{2}-(?!0000)\\d{4}$/";
-      default:
-        return type;
-    }
-  }
 
 
   const handleCheckboxChange = (index) => {
@@ -395,6 +384,23 @@ const WidgetNameModal = (props) => {
             </div>
           </div>
         )}
+        {isSignOrInitials && (
+          <div className="mb-[0.75rem]">
+            <label className="text-[14px] mb-[0.7rem]">{t("rotation")}</label>
+            <div className="ml-[7px] flex items-center gap-[10px]">
+              <select
+                className="op-select op-select-bordered op-select-sm focus:outline-none hover:border-base-content text-xs w-[120px]"
+                value={rotation}
+                onChange={(e) => setRotation(parseInt(e.target.value))}
+              >
+                <option value={0}>0°</option>
+                <option value={90}>90°</option>
+                <option value={180}>180°</option>
+                <option value={270}>270°</option>
+              </select>
+            </div>
+          </div>
+        )}
         {!props?.isSelfSign && props?.roleName !== "prefill" && (
           <div className="mb-[0.75rem]">
             <label htmlFor="hint" className="text-[13px]">
@@ -410,6 +416,7 @@ const WidgetNameModal = (props) => {
             />
           </div>
         )}
+
         {showFontControls && (
           <div className="flex flex-col md:flex-row md:items-center gap-3 mb-3">
             <div className="flex items-center gap-2 ">

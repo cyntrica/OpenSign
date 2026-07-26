@@ -40,6 +40,8 @@ const VerifyDocument = lazyWithRetry(() => import("./pages/VerifyDocument"));
 const PrivacyPolicy = lazyWithRetry(() => import("./pages/PrivacyPolicy"));
 const TermsAndConditions = lazyWithRetry(() => import("./pages/TermsAndConditions"));
 const Signup = lazyWithRetry(() => import("./pages/Signup"));
+const EmailBuilder = lazyWithRetry(() => import("./pages/EmailBuilder"));
+
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.mjs`;
 const AppLoader = () => {
   return (
@@ -158,6 +160,7 @@ function App() {
               ))}
             </Route>
             <Route path="/success" element={<DocSuccessPage />} />
+            <Route path="/emailbuilder" element={<EmailBuilder />} />
             <Route path="*" element={<PageNotFound />} />
           </Routes>
         </BrowserRouter>

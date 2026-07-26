@@ -19,6 +19,23 @@ import { Placeholder } from './Placeholder.js';
 import { SignPdf } from '@signpdf/signpdf';
 import { P12Signer } from '@signpdf/signer-p12';
 import { buildDownloadFilename, parseUploadFile } from '../../../utils/fileUtils.js';
+import sendMailWithAttachment from '../sendMailWithAttachment.js';
+import sendSystemMail from '../sendSystemMail.js';
+import {
+  COMPLETION_ACTIVITIES,
+  findPlaceholderIndex,
+  findPendingPriorSigner,
+  isCompletionRelevant,
+} from '../../../utils/workflowUtils.js';
+
+// Audit-trail activities that count toward document completion. The free
+// build only counts 'Signed'; EE additionally counts 'Approved'.
+
+// A placeholder participates in completion unless it is a prefill entry.
+// EE additionally excludes viewers (who never act on the document).
+
+// Strict-order gating: returns the signerObjId of the prior placeholder
+// still pending, or null when the strict-order requirement is satisfied.
 
 const serverUrl = cloudServerUrl; // process.env.SERVER_URL;
 const APPID = serverAppId;
@@ -65,13 +82,24 @@ async function uploadFile(pdfName, filepath) {
 }
 
 // `updateDoc` is used to update signedUrl, AuditTrail, Iscompleted in document
-async function updateDoc(docId, url, userId, ipAddress, data, className, sign, documentHash) {
+async function updateDoc(
+  docId,
+  url,
+  userId,
+  ipAddress,
+  data,
+  className,
+  sign,
+  documentHash,
+  activity
+) {
   try {
     const UserPtr = { __type: 'Pointer', className: className, objectId: userId };
+    const auditActivity = 'Signed';
     const obj = {
       UserPtr: UserPtr,
       SignedUrl: url,
-      Activity: 'Signed',
+      Activity: auditActivity,
       ipAddress: ipAddress,
       SignedOn: new Date(),
       Signature: sign,
@@ -91,15 +119,14 @@ async function updateDoc(docId, url, userId, ipAddress, data, className, sign, d
       updateAuditTrail = [obj];
     }
 
-    const auditTrail = updateAuditTrail.filter(x => x.Activity === 'Signed');
+    // Count both Signed and Approved entries; only signer/approver
+    // placeholders count toward completion (viewers and prefill excluded).
+    const auditTrail = updateAuditTrail.filter(x => COMPLETION_ACTIVITIES.includes(x.Activity));
     let isCompleted = false;
     if (data.Signers && data.Signers.length > 0) {
-      //'removePrefill' is used to remove prefill role from placeholders filed then compare length to change status of document
-      const removePrefill =
-        data.Placeholders.length > 0 ? data.Placeholders.filter(x => x.Role !== 'prefill') : [];
-      // Complete only when every non-prefill placeholder is signed. `>=` guards against
-      // audit-trail drift; `length > 0` prevents a zero-placeholder doc auto-completing.
-      if (removePrefill.length > 0 && auditTrail.length >= removePrefill.length) {
+      const completionRelevant =
+        data.Placeholders?.length > 0 ? data.Placeholders.filter(isCompletionRelevant) : [];
+      if (auditTrail.length >= completionRelevant.length && completionRelevant.length > 0) {
         isCompleted = true;
       }
     } else {
@@ -130,10 +157,11 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
       `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
     const complaintEmail = contactEmail || 'support@sineseal.com';
     const opurl = ` <a href='mailto:${complaintEmail}' target=_blank>here</a>`;
-    const auditTrailCount = doc?.AuditTrail?.filter(x => x.Activity === 'Signed')?.length || 0;
-    const removePrefill =
-      doc?.Placeholders?.length > 0 && doc?.Placeholders?.filter(x => x?.Role !== 'prefill');
-    const signersCount = removePrefill?.length;
+    const auditTrailCount =
+      doc?.AuditTrail?.filter(x => COMPLETION_ACTIVITIES.includes(x.Activity))?.length || 0;
+    const completionRelevant =
+      doc?.Placeholders?.length > 0 ? doc.Placeholders.filter(isCompletionRelevant) : [];
+    const signersCount = completionRelevant?.length;
     const remainingSign = signersCount - auditTrailCount;
     if (remainingSign > 1 && doc?.NotifyOnSignatures) {
       const sender = doc.ExtUserPtr;
@@ -160,7 +188,7 @@ async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
         html: body,
         mailProvider: mailProvider,
       };
-      await Parse.Cloud.run('sendmailv3', params, { useMasterKey: true });
+      await sendSystemMail({ params });
     }
   } catch (err) {
     console.log('err in sendnotifymail', err);
@@ -232,7 +260,8 @@ async function sendCompletedMail(obj) {
 
     const variables = {
       document_title: pdfName,
-      sender_name: sender.Name,
+      note: doc?.Note,
+      sender_name: doc?.SenderName || sender.Name,
       sender_mail: doc?.SenderMail || sender.Email,
       sender_phone: sender?.Phone || '',
       receiver_name: sender.Name,
@@ -246,6 +275,7 @@ async function sendCompletedMail(obj) {
     body = replaceVar.body;
   }
   const Bcc = doc?.Bcc?.length > 0 ? doc.Bcc.map(x => x.Email) : [];
+  const Cc = doc?.Cc?.length > 0 ? doc.Cc.map(x => x.Email) : [];
   const updatedBcc = doc?.SenderMail ? [...Bcc, doc?.SenderMail] : Bcc;
   const formatId = doc?.ExtUserPtr?.DownloadFilenameFormat;
   const filename = pdfName?.length > 100 ? pdfName?.slice(0, 100) : pdfName;
@@ -257,19 +287,20 @@ async function sendCompletedMail(obj) {
   const params = {
     extUserId: sender.objectId,
     url: url,
-    from: TenantAppName,
-    replyto: doc?.ExtUserPtr?.Email || '',
+    from: doc?.SenderName || TenantAppName,
+    replyto: doc?.SenderMail || doc?.ExtUserPtr?.Email || '',
     recipient: recipient,
     subject: subject,
     pdfName: pdfName,
     html: body,
     mailProvider: obj.mailProvider,
     bcc: updatedBcc?.length > 0 ? updatedBcc : '',
+    cc: Cc?.length > 0 ? Cc : '',
     certificatePath: `./exports/signed_certificate_${doc.objectId}.pdf`,
     filename: docName,
   };
   try {
-    const res = await Parse.Cloud.run('sendmailv3', params, { useMasterKey: true });
+    const res = await sendMailWithAttachment(params);
     if (res?.status !== 'success') {
       unlinkFile(`./exports/signed_certificate_${doc.objectId}.pdf`);
     }
@@ -375,11 +406,14 @@ async function PDF(req) {
     const isCustomMail = req.params.isCustomCompletionMail || false;
     const mailProvider = req.params.mailProvider || '';
     const sign = req.params.signature || '';
+    const auditActivity = 'Signed';
     const publicUrl = req.headers.public_url;
     // below bode is used to get info of docId
     const docQuery = new Parse.Query('contracts_Document');
-    docQuery.include('ExtUserPtr,Signers,ExtUserPtr.TenantId,Bcc,CreatedBy');
+    docQuery.include('ExtUserPtr,Signers,ExtUserPtr.TenantId,Bcc,Cc,CreatedBy');
     docQuery.equalTo('objectId', docId);
+    docQuery.notEqualTo('IsDeclined', true);
+    docQuery.notEqualTo('IsArchive', true);
     const resDoc = await docQuery.first({ useMasterKey: true });
     if (!resDoc) {
       throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'Document not found.');
@@ -413,7 +447,27 @@ async function PDF(req) {
       className = 'contracts_Users';
       signUser = _resDoc.ExtUserPtr;
     }
-
+    // Strict-order gating: when both `SendinOrder` and `SendInOrderStrict`
+    // are enabled the document creator wants the signing flow locked to a
+    // strict sequence — a signer/approver may only act once every previous
+    // signer/approver placeholder has a Signed/Approved audit entry. We
+    // skip this check entirely for the document owner (className=Users)
+    // because owners never sign through this path.
+    if (reqUserId && _resDoc?.SendinOrder === true && _resDoc?.SendInOrderStrict === true) {
+      const placeholders = Array.isArray(_resDoc?.Placeholders)
+        ? _resDoc.Placeholders.filter(p => p?.Role !== 'prefill')
+        : [];
+      const myIdx = findPlaceholderIndex(placeholders, reqUserId);
+      if (myIdx > 0) {
+        const pendingId = findPendingPriorSigner(placeholders, myIdx, _resDoc?.AuditTrail);
+        if (pendingId) {
+          throw new Parse.Error(
+            Parse.Error.OPERATION_FORBIDDEN,
+            'Strict signing order is enabled — please wait for the previous signers to complete their action before signing.'
+          );
+        }
+      }
+    }
     const username = signUser.Name;
     const userEmail = signUser.Email;
     if (req.params.pdfFile) {
@@ -430,7 +484,7 @@ async function PDF(req) {
       const P12Buffer = Buffer.from(pfxFile, 'base64');
       fs.writeFileSync(pfxname, P12Buffer);
       const UserPtr = { __type: 'Pointer', className: className, objectId: signUser.objectId };
-      const obj = { UserPtr: UserPtr, SignedUrl: '', Activity: 'Signed', ipAddress: userIP };
+      const obj = { UserPtr: UserPtr, SignedUrl: '', Activity: auditActivity, ipAddress: userIP };
       let updateAuditTrail;
       if (_resDoc.AuditTrail && _resDoc.AuditTrail.length > 0) {
         updateAuditTrail = [..._resDoc.AuditTrail, obj];
@@ -438,14 +492,17 @@ async function PDF(req) {
         updateAuditTrail = [obj];
       }
 
-      const auditTrail = updateAuditTrail.filter(x => x.Activity === 'Signed');
+      // Both Signed and Approved entries count toward completion. Only
+      // signer/approver placeholders are counted; viewers and prefill are
+      // excluded.
+      const auditTrail = updateAuditTrail.filter(x => COMPLETION_ACTIVITIES.includes(x.Activity));
       let isCompleted = false;
       if (_resDoc.Signers && _resDoc.Signers.length > 0) {
-        const removePrefill =
+        const completionRelevant =
           _resDoc?.Placeholders?.length > 0
-            ? _resDoc?.Placeholders?.filter(x => x?.Role !== 'prefill')
+            ? _resDoc.Placeholders.filter(isCompletionRelevant)
             : [];
-        if (removePrefill.length > 0 && auditTrail.length >= removePrefill.length) {
+        if (auditTrail.length >= completionRelevant.length && completionRelevant.length > 0) {
           isCompleted = true;
         }
       } else {
@@ -498,7 +555,8 @@ async function PDF(req) {
           _resDoc, // auditTrail, signers, etc data
           className, // className based on flow
           sign, // sign base64
-          isCompleted ? documentHash : undefined
+          isCompleted ? documentHash : undefined,
+          auditActivity
         );
         sendNotifyMail(_resDoc, signUser, mailProvider, publicUrl).catch(err => console.error('[PDF] sendNotifyMail error:', err.message));
         saveFileUsage(pdfSize, data.imageUrl, _resDoc?.CreatedBy?.objectId);

@@ -25,8 +25,7 @@ import AddContact from "../../primitives/AddContact";
 import Loader from "../../primitives/Loader";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  resetWidgetState,
-  setPrefillImg
+  setPrefillImg,
 } from "../../redux/reducers/widgetSlice";
 import * as utils from "../../utils";
 import Draw from "./tab/Draw";
@@ -122,6 +121,7 @@ function PrefillWidgetModal(props) {
   const dispatch = useDispatch();
   const canvasRefs = useRef({});
   const [penColor, setPenColor] = useState("blue");
+  const prefillImg = useSelector((state) => state.widget.prefillImg);
   // Track already loaded image keys so they don't increment multiple times
   const loadedSet = useRef(new Set());
   const initializedRef = useRef(false); // prevent rerun on state updates
@@ -148,22 +148,29 @@ function PrefillWidgetModal(props) {
         return true;
       })
     }));
-    //latten the filtered array and exclude read-only widgets
-    const flatArray = filteredArray?.flatMap((page) =>
-      page.pos
-        .filter((widget) => !widget.options?.isReadOnly)
-        .map((widget) => ({
-          widget,
-          pageNumber: page.pageNumber
-        }))
-    );
+    // Flatten the filtered array, exclude read-only widgets,
+    // carry yPosition for sorting, then sort by pageNumber asc → yPosition asc
+    // (mirrors the newSignPos.sort in PdfRequestFiles so widgets appear in
+    // the same top-to-bottom, page-1-first order as they do in the document)
+    const flatArray = filteredArray
+      ?.flatMap((page) =>
+        page.pos
+          .filter((widget) => !widget.options?.isReadOnly)
+          .map((widget) => ({
+            widget,
+            pageNumber: page.pageNumber,
+            yPosition: widget.yPosition ?? 0
+          }))
+      )
+      ?.sort((a, b) =>
+        a.pageNumber !== b.pageNumber
+          ? a.pageNumber - b.pageNumber  // primary: page order (page 1 first)
+          : a.yPosition - b.yPosition    // secondary: top-to-bottom within page
+      );
 
     return flatArray || [];
   }, [props.prefillData]);
 
-  useEffect(() => {
-    dispatch(resetWidgetState([]));
-  }, []);
   // Reset loader state when modal closes
   useEffect(() => {
     if (!props?.isPrefillModal) {
@@ -176,10 +183,10 @@ function PrefillWidgetModal(props) {
   useEffect(() => {
     //function is used to save all image base64 in redux state to display prefill images
     const savePrefillImg = async () => {
-      const prefillImg = await utils?.savePrefillImg(props.xyPosition);
-      if (Array.isArray(prefillImg)) {
+      const prefillImage = await utils?.savePrefillImg(props.xyPosition);
+      if (Array.isArray(prefillImage)) {
         setLoading(true);
-        prefillImg.forEach((img) => dispatch(setPrefillImg(img)));
+        prefillImage.forEach((img) => dispatch(setPrefillImg(img)));
       }
       setLoading(false);
     };
@@ -213,7 +220,6 @@ function PrefillWidgetModal(props) {
       }
     }
   }, [props?.isPrefillModal, uniqueWidget]);
- 
   const ExampleCustomInput = forwardRef(({ value, onClick }, ref) => (
     <div
       style={{ fontFamily: "Arial, sans-serif" }}
@@ -271,6 +277,24 @@ function PrefillWidgetModal(props) {
       console.log("error in handleSavePrefillImg function ", e);
     }
   };
+  //'buildUpdatedItem' function to update response
+  const buildUpdatedItem = (item, widgetDetails, response, imgUrl) => {
+    const isImage = widgetDetails?.type === "image";
+    const finalResponse = isImage ? imgUrl : response;
+
+    return {
+      ...item,
+      ...(isImage && {
+        SignUrl: imgUrl,
+        ImageType: image.imgType
+      }),
+      options: {
+        ...item.options,
+        response: finalResponse
+      }
+    };
+  };
+
   //function is used to handle prefill widgets details and check if there are any duplicate widget name field exist then update all duplicate value
   const handleWidgetDetails = async (widgetDetails, response) => {
     const widgetName = widgetDetails?.options?.name;
@@ -283,37 +307,45 @@ function PrefillWidgetModal(props) {
     const updatedData = getPlaceholder.map((page) => ({
       ...page,
       pos: page.pos.map((item) => {
-        if (item.options.name === widgetName) {
-          if (widgetDetails?.type === "image") {
-            return {
-              ...item,
-              SignUrl: imgUrl,
-              ImageType: image.imgType,
-              options: { ...item.options, response: imgUrl }
-            };
-          } else {
-            return {
-              ...item,
-              options: { ...item.options, response: response }
-            };
-          }
-        } else {
-          return item;
+        const isSameKey = item.key === widgetDetails.key;
+        const isSameName =
+          item.options?.name === widgetName && item.key !== widgetDetails.key;
+
+        // Always update the active widget
+        if (isSameKey) {
+          return buildUpdatedItem(item, widgetDetails, response, imgUrl);
         }
+
+        // Sync same-name widgets ONLY if response is valid for them
+        if (isSameName) {
+          const isValidForTarget = utils.isWidgetResponseCompatible({
+            ...item,
+            options: {
+              ...item.options,
+              response: widgetDetails?.type === "image" ? imgUrl : response
+            }
+          });
+
+          if (!isValidForTarget) {
+            return item; // skip invalid sync
+          }
+
+          return buildUpdatedItem(item, widgetDetails, response, imgUrl);
+        }
+
+        return item;
       })
     }));
-    const newUpdateSigner = props.xyPosition.map((obj) => {
-      if (obj.Role === "prefill") {
-        return { ...obj, placeHolder: updatedData };
-      }
-      return obj;
-    });
+    const newUpdateSigner = props.xyPosition.map((obj) =>
+      obj.Role === "prefill" ? { ...obj, placeHolder: updatedData } : obj
+    );
+
     props.setXyPosition(newUpdateSigner);
   };
 
   //function for set checked and unchecked value of checkbox
   const handleCheckboxValue = (isChecked, ind, position) => {
-    let updateSelectedCheckbox = [];
+     let updateSelectedCheckbox = [];
     updateSelectedCheckbox =
       position.options?.defaultValue || position.options?.response || [];
     if (isChecked) {
@@ -440,7 +472,7 @@ function PrefillWidgetModal(props) {
                   className="select-none-cls flex items-center text-center gap-0.5"
                 >
                   <input
-                    id={`checkbox-${position.key + ind}`}
+                    id={`modal-checkbox-${position.key + ind}`}
                     className="mt-[2px] op-checkbox op-checkbox-xs"
                     type="checkbox"
                     checked={selectCheckbox(ind, position)}
@@ -449,7 +481,7 @@ function PrefillWidgetModal(props) {
                     }
                   />
                   <label
-                    htmlFor={`checkbox-${position.key + ind}`}
+                    htmlFor={`modal-checkbox-${position.key + ind}`}
                     className="text-xs mb-0 text-center ml-[3px] cursor-pointer"
                   >
                     {data}
@@ -572,14 +604,14 @@ function PrefillWidgetModal(props) {
                   className="select-none-cls flex items-center text-center gap-0.5"
                 >
                   <input
-                    id={`radio-${position.key + ind}`}
+                    id={`modal-radio-${position.key + ind}`}
                     className="mt-[2px] op-radio op-radio-xs"
                     type="radio"
                     checked={handleRadioCheck(data, position)}
                     onChange={() => handleWidgetDetails(position, data)}
                   />
                   <label
-                    htmlFor={`radio-${position.key + ind}`}
+                    htmlFor={`modal-radio-${position.key + ind}`}
                     className="text-xs mb-0 ml-[2px] cursor-pointer"
                   >
                     {data}
@@ -598,6 +630,7 @@ function PrefillWidgetModal(props) {
               {position.options?.name}
             </span>
             <Draw
+              key={position.key + "_" + (prefillImg?.length || 0)}
               penColor={penColor}
               canvasRef={getCanvasRef(position.key)}
               currWidgetsDetails={position}

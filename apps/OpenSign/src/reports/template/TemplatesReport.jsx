@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import pad from "../../assets/images/pad.svg";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import axios from "axios";
 import ModalUi from "../../primitives/ModalUi";
 import Alert from "../../primitives/Alert";
@@ -20,18 +20,10 @@ import {
   defaultMailBody,
   defaultMailSubject
 } from "../../constant/Utils";
-import EditorToolbar, {
-  module1,
-  formats
-} from "../../components/pdf/EditorToolbar";
-import ReactQuill from "react-quill-new";
-import "../../styles/quill.css";
 import BulkSendUi from "../../components/bulksend/BulkSendUi";
 import Loader from "../../primitives/Loader";
 import { serverUrl_fn } from "../../constant/appinfo";
-import {
-  useTranslation
-} from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useElSize } from "../../hook/useElSize";
 import LottieWithLoader from "../../primitives/DotLottieReact";
 import PrefillWidgetModal from "../../components/pdf/PrefillWidgetsModal";
@@ -40,6 +32,19 @@ import { useDispatch, useSelector } from "react-redux";
 import { RenderReportCell } from "../../primitives/RenderReportCell";
 import CustomizeMail from "../../components/pdf/CustomizeMail";
 import { resetWidgetState } from "../../redux/reducers/widgetSlice";
+import EmailEditor from "../../components/emaileditor";
+
+const isSignExist = (placeholders = []) => {
+  const isSignature =
+    Array.isArray(placeholders) &&
+    placeholders?.length > 0 &&
+    placeholders.every((p) => {
+      return p?.placeHolder?.some((h) =>
+        h?.pos?.some((x) => x?.type === "signature")
+      );
+    });
+  return isSignature;
+};
 
 const TemplatesReport = (props) => {
   const copyUrlRef = useRef(null);
@@ -64,7 +69,11 @@ const TemplatesReport = (props) => {
   const [isTour, setIsTour] = useState(false);
   const [tourStatusArr, setTourStatusArr] = useState([]);
   const [isResendMail, setIsResendMail] = useState({});
-  const [mail, setMail] = useState({ subject: "", body: "" });
+  const [mail, setMail] = useState({
+    subject: "",
+    body: { basic: "", advanced: "" }
+  });
+  const [emailEditorType, setEmailEditorType] = useState("basic");
   const [userDetails, setUserDetails] = useState({});
   const [isNextStep, setIsNextStep] = useState({});
   const [isBulkSend, setIsBulkSend] = useState({});
@@ -91,7 +100,10 @@ const TemplatesReport = (props) => {
   const startIndex = (currentPage - 1) * props.docPerPage;
   const { isMoreDocs, setIsNextRecord } = props;
   const [isMailModal, setIsMailModal] = useState(false);
-  const [customizeMail, setCustomizeMail] = useState({ body: "", subject: "" });
+  const [customizeMail, setCustomizeMail] = useState({
+    body: { basic: "", advanced: "" },
+    subject: ""
+  });
   const [defaultMail, setDefaultMail] = useState({ body: "", subject: "" });
   const [currUserId, setCurrUserId] = useState("");
   const [documentDetails, setDocumentDetails] = useState();
@@ -242,15 +254,11 @@ const TemplatesReport = (props) => {
     } else {
       // handle Use template
       const placeholder = item?.Placeholders || [];
-      const isRoleExist = placeholder?.filter((x) => x.Role !== "prefill");
+      const signers = placeholder?.filter((x) => x.Role !== "prefill");
       //condition to check atleast one role is present for use template
-      if (isRoleExist && isRoleExist?.length > 0) {
-        const checkIsSignatureExist = isRoleExist?.every((placeholderObj) =>
-          placeholderObj?.placeHolder?.some((holder) =>
-            holder?.pos?.some((posItem) => posItem?.type === "signature")
-          )
-        );
-        if (checkIsSignatureExist) {
+      if (signers && signers?.length > 0) {
+        const isSignatureExist = isSignExist(signers);
+        if (isSignatureExist) {
           setActLoader({ [`${item.objectId}_${act.btnId}`]: true });
           const template = await fetchTemplate(item.objectId);
           const templateData = template.data && template.data.result;
@@ -305,7 +313,7 @@ const TemplatesReport = (props) => {
       setActLoader({});
     }
   });
-  //function is called when there ther no any prefill role widget exist then create direct document and navigate
+  //function is called when there are no any prefill role widget exist then create direct document and navigate
   const navigatePageToDoc = utils.withSessionValidation(
     async (templateRes, placeholder, signer) => {
       setIsPrefillModal({});
@@ -437,10 +445,10 @@ const TemplatesReport = (props) => {
         return `${host}/login/${encodeBase64}`;
       }
     };
-    const removePrefill = item?.Placeholders.filter(
+    const placeholders = item?.Placeholders.filter(
       (data) => data?.Role !== "prefill"
     );
-    const urls = removePrefill?.map((x) => ({
+    const urls = placeholders?.map((x) => ({
       email: x.email ? x.email : x.signerPtr.Email,
       url: getUrl(x)
     }));
@@ -546,6 +554,13 @@ const TemplatesReport = (props) => {
     }
   };
 
+  // `handleSwitch` is used to change email editor from basic => advanced or vice versa
+  const handleSwitch = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const editor = emailEditorType === "basic" ? "advanced" : "basic";
+    setEmailEditorType(editor);
+  };
   // `handleSubjectChange` is used to add or change subject of resend mail
   const handleSubjectChange = (subject, doc) => {
     const encodeBase64 = userDetails?.objectId
@@ -563,9 +578,9 @@ const TemplatesReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: userDetails?.Name || "",
       receiver_email: userDetails?.Email,
@@ -578,7 +593,7 @@ const TemplatesReport = (props) => {
     setMail((prev) => ({ ...prev, subject: res.subject }));
   };
   // `handlebodyChange` is used to add or change body of resend mail
-  const handlebodyChange = (body, doc) => {
+  const handlebodyChange = (body, doc, type) => {
     const encodeBase64 = userDetails?.objectId
       ? btoa(`${doc.objectId}/${userDetails.Email}/${userDetails.objectId}`)
       : btoa(`${doc.objectId}/${userDetails.Email}`);
@@ -594,9 +609,9 @@ const TemplatesReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: userDetails?.Name || "",
       receiver_email: userDetails?.Email || "",
@@ -608,7 +623,10 @@ const TemplatesReport = (props) => {
     const res = replaceMailVaribles("", body, variables);
 
     if (body) {
-      setMail((prev) => ({ ...prev, body: res.body }));
+      setMail((prev) => ({
+        ...prev,
+        body: { ...prev.body, [type]: res.body }
+      }));
     }
   };
   // `handleNextBtn` is used to open edit mail template screen in resend mail modal
@@ -638,9 +656,9 @@ const TemplatesReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: user?.signerPtr?.Name || "",
       receiver_email: user?.email ? user?.email : user?.signerPtr?.Email,
@@ -658,7 +676,17 @@ const TemplatesReport = (props) => {
       doc?.ExtUserPtr?.TenantId?.RequestBody ||
       `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body><p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}} has requested you to review and sign <b>"{{document_title}}"</b>.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process,  please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br></body> </html>`;
     const res = replaceMailVaribles(subject, body, variables);
-    setMail((prev) => ({ ...prev, subject: res.subject, body: res.body }));
+    setEmailEditorType(
+      doc?.EmailEditorType?.request ||
+        doc?.ExtUserPtr?.EmailEditorType?.request ||
+        doc?.ExtUserPtr?.TenantId?.EmailEditorType?.request ||
+        "basic"
+    );
+    setMail((prev) => ({
+      ...prev,
+      subject: res.subject,
+      body: { basic: res.body, advanced: res.body }
+    }));
     setIsNextStep({ [user.Id]: true });
   });
   const handleResendMail = utils.withSessionValidation(async (e, doc, user) => {
@@ -678,8 +706,9 @@ const TemplatesReport = (props) => {
       recipient: userDetails?.Email,
       subject: mail.subject,
       from:
+        doc?.SenderName ||
         doc?.ExtUserPtr?.Email,
-      html: mail.body
+      html: emailEditorType === "basic" ? mail.body.basic : mail.body.advanced
     };
     try {
       const res = await axios.post(url, params, { headers: headers });
@@ -909,7 +938,7 @@ const TemplatesReport = (props) => {
         timeInMiliSec
       );
     } else if (res?.status === "unattach signer") {
-      showAlert("danger", "please attach all role to signer");
+      showAlert("danger", t("attach-all-role-to-signer"));
     } else if (res?.status === "success") {
       setDocumentId(res.id);
       setActLoader({});
@@ -950,9 +979,13 @@ const TemplatesReport = (props) => {
                   subject;
             const userBody =
                   body;
+            const finalBody = userBody || defaultMailBody;
+            const emailEditorType =
+                  tenantDetails?.EmailEditorType?.request;
+            setEmailEditorType(emailEditorType || "basic");
             setCustomizeMail({
-              subject: userSubject ?? defaultMailSubject,
-              body: userBody ?? defaultMailBody
+              subject: userSubject || defaultMailSubject,
+              body: { basic: finalBody, advanced: finalBody }
             });
             setDefaultMail({ subject: userSubject, body: userBody });
           }
@@ -962,6 +995,9 @@ const TemplatesReport = (props) => {
       } else {
         alert(t("user-not-exist"));
       }
+    } else if (res?.status === "error") {
+      const message = res?.message || "something-went-wrong-mssg";
+      showAlert("danger", t(message));
     }
     setIsSubmit(false);
   });
@@ -978,7 +1014,10 @@ const TemplatesReport = (props) => {
         `${documentId}/${signerMail[i].Email}/${objectId}/${sendMail}`
       );
       let signPdf = `${hostUrl}/login/${encodeBase64}`;
-      shareLinkList.push({ signerEmail: signerMail[i].Email, url: signPdf });
+      shareLinkList.push({
+        signerEmail: signerMail[i].Email,
+        url: signPdf
+      });
     }
     return shareLinkList.map((data, ind) => {
       return (
@@ -1011,11 +1050,9 @@ const TemplatesReport = (props) => {
       );
     });
   };
-  const handleRemovePrefill = (placeholders) => {
-    const removePrefill = placeholders?.filter(
-      (data) => data?.Role !== "prefill"
-    );
-    return removePrefill;
+  const filteredPlaceholders = (placeholders = []) => {
+    const filtered = placeholders?.filter((data) => data?.Role !== "prefill");
+    return filtered;
   };
   const handleRecipientSign = (docId, currUserId) => {
     if (currUserId) {
@@ -1163,7 +1200,7 @@ const TemplatesReport = (props) => {
                         rowIndex={index}
                         startIndex={startIndex}
                         handleDownload={handleDownload}
-                        handleRemovePrefill={handleRemovePrefill}
+                        handleRemovePrefill={filteredPlaceholders}
                         reportName={props.ReportName}
                         handleItemClick={handleItemClick}
                       />
@@ -1222,6 +1259,14 @@ const TemplatesReport = (props) => {
                                                   t(
                                                     `btnLabel.${subact.btnLabel}`
                                                   )}
+                                                <span className="ml-0.5">
+                                                  {subact?.help && (
+                                                    <Tooltip
+                                                      id={`${subact.btnLabel}-${item.objectId}`}
+                                                      message={t(subact?.help)}
+                                                    />
+                                                  )}
+                                                </span>
                                               </span>
                                               {subact.secIcon && (
                                                 <i
@@ -1361,12 +1406,30 @@ const TemplatesReport = (props) => {
                               <Loader />
                             </div>
                           ) : (
-                            <BulkSendUi
-                              Placeholders={placeholders}
-                              item={templateDetails}
-                              handleClose={handleQuickSendClose}
-                              signatureType={signatureType}
-                            />
+                            <>
+                              {!extClass?.[0]?.UserId?.emailVerified ? (
+                                <div className="mx-[20px] mt-[15px] mb-[20px]">
+                                  <Trans
+                                    i18nKey="email-not-verified-send"
+                                    components={{
+                                      1: (
+                                        <Link
+                                          to="/profile"
+                                          className="text-blue-700 underline cursor-pointer"
+                                        />
+                                      )
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <BulkSendUi
+                                  Placeholders={placeholders}
+                                  item={templateDetails}
+                                  handleClose={handleQuickSendClose}
+                                  signatureType={signatureType}
+                                />
+                              )}
+                            </>
                           )}
                         </ModalUi>
                       )}
@@ -1431,9 +1494,9 @@ const TemplatesReport = (props) => {
                               )?.map((user) => (
                                 <React.Fragment key={user.Id}>
                                   {isNextStep[user.Id] && (
-                                    <div className="relative ">
+                                    <div className="relative">
                                       {actLoader[user.Id] && (
-                                        <div className="absolute w-full h-full flex justify-center items-center bg-black bg-opacity-30 z-30">
+                                        <div className="absolute w-full h-full flex justify-center items-center bg-black bg-opacity-30 z-[60]">
                                           <Loader />
                                         </div>
                                       )}
@@ -1449,60 +1512,70 @@ const TemplatesReport = (props) => {
                                             message={t("resend-mail-help")}
                                           />
                                         </div>
-                                        <div>
-                                          <label
-                                            className="text-xs ml-1"
-                                            htmlFor="mailsubject"
-                                          >
-                                            {t("subject")}{" "}
-                                          </label>
-                                          <input
-                                            id="mailsubject"
-                                            className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
-                                            value={mail.subject}
-                                            onChange={(e) =>
-                                              handleSubjectChange(
-                                                e.target.value,
-                                                item
-                                              )
-                                            }
-                                            onInvalid={(e) =>
-                                              e.target.setCustomValidity(
-                                                t("input-required")
-                                              )
-                                            }
-                                            onInput={(e) =>
-                                              e.target.setCustomValidity("")
-                                            }
-                                            required
-                                          />
+                                        <div className="w-full flex flex-col gap-2 text-base-content relative">
+                                          <div>
+                                            <label
+                                              className="text-xs ml-1"
+                                              htmlFor="mailsubject"
+                                            >
+                                              {t("subject")}{" "}
+                                            </label>
+                                            <input
+                                              id="mailsubject"
+                                              className="op-input op-input-bordered op-input-sm focus:outline-none hover:border-base-content w-full text-xs"
+                                              value={mail.subject}
+                                              onChange={(e) =>
+                                                handleSubjectChange(
+                                                  e.target.value,
+                                                  item
+                                                )
+                                              }
+                                              onInvalid={(e) =>
+                                                e.target.setCustomValidity(
+                                                  t("input-required")
+                                                )
+                                              }
+                                              onInput={(e) =>
+                                                e.target.setCustomValidity("")
+                                              }
+                                              required
+                                            />
+                                          </div>
+                                          <div>
+                                            <label
+                                              className="flex justify-between text-sm ml-1"
+                                              htmlFor="mailbody"
+                                            >
+                                              <span>{t("body")} </span>
+                                              <button
+                                                className="op-link op-link-primary"
+                                                onClick={(e) => handleSwitch(e)}
+                                              >
+                                                {emailEditorType === "basic"
+                                                  ? t("switch-to-advanced")
+                                                  : t("switch-to-basic")}
+                                              </button>
+                                            </label>
+                                            <EmailEditor
+                                              type={emailEditorType}
+                                              values={mail.body || ""}
+                                              onChange={(value, type) =>
+                                                handlebodyChange(
+                                                  value,
+                                                  item,
+                                                  type
+                                                )
+                                              }
+                                              smallscreen
+                                            />
+                                          </div>
                                         </div>
-                                        <div>
-                                          <label
-                                            className="text-xs ml-1"
-                                            htmlFor="mailbody"
+                                          <button
+                                            type="submit"
+                                            className="op-btn op-btn-primary"
                                           >
-                                            {t("body")}{" "}
-                                          </label>
-                                          <EditorToolbar containerId="toolbar1" />
-                                          <ReactQuill
-                                            id="mailbody"
-                                            theme="snow"
-                                            value={mail.body || ""}
-                                            placeholder="add body of email "
-                                            modules={module1}
-                                            formats={formats}
-                                            onChange={(value) =>
-                                              handlebodyChange(value, item)
-                                            }
-                                          />
-                                        </div>
-                                        <button
-                                          type="submit"
-                                          className="op-btn op-btn-primary"
-                                        >
-                                          {t("resend")}
-                                        </button>
+                                            {t("resend")}
+                                          </button>
                                       </form>
                                     </div>
                                   )}
@@ -1578,11 +1651,11 @@ const TemplatesReport = (props) => {
                     <img
                       className="w-full h-full object-contain"
                       src={pad}
-                      alt={t("no-data-avaliable")}
+                      alt={t("no-data-available")}
                     />
                   </div>
                   <div className="text-sm font-semibold">
-                    {t("no-data-avaliable")}
+                    {t("no-data-available")}
                   </div>
                 </>
               )}
@@ -1632,18 +1705,19 @@ const TemplatesReport = (props) => {
           setCurrUserId={setCurrUserId}
           handleShareList={handleShareList}
           setDocumentDetails={setDocumentDetails}
+          copyUrlRef={copyUrlRef}
+          emailEditorType={emailEditorType}
+          setEmailEditorType={setEmailEditorType}
         />
         <ModalUi
           isOpen={isSend}
-          title={
-            !templateDetails?.SendinOrder
-              ? mailStatus === "success"
-                ? t("mails-sent")
-                : mailStatus === "quotareached"
-                  ? t("quota-mail-head")
-                  : t("mail-not-delivered")
-              : t("mail-status-head")
-          }
+          title={t(
+            utils.mailModalHead(
+              templateDetails?.SendinOrder,
+              mailStatus,
+              currUserId
+            )
+          )}
           handleClose={() => {
             setIsSend(false);
             navigate("/report/1MwEuxLEkF");
@@ -1673,6 +1747,20 @@ const TemplatesReport = (props) => {
                   </div>
                 ) : mailStatus === "failed" ? (
                   <p>{t("mail-failed")} </p>
+                ) : mailStatus === "emailnotverified" ? (
+                  <p>
+                    <Trans
+                      i18nKey="email-not-verified-send"
+                      components={{
+                        1: (
+                          <a
+                            href="/profile"
+                            className="text-blue-700 underline cursor-pointer"
+                          />
+                        )
+                      }}
+                    />
+                  </p>
                 ) : (
                   <div className="mb-[10px]">
                     {!templateDetails?.SendinOrder &&
@@ -1727,21 +1815,16 @@ const TemplatesReport = (props) => {
               {mailStatus !== "success" &&
                 currUserId &&
                 templateDetails?.SendinOrder && (
-                  <>
-                    <div
-                      className="op-btn op-btn-outline w-[50%] md:w-[35%] mt-1"
-                      onClick={() => {
-                        setIsSend(false);
-                        setIsMailModal(true);
-                      }}
-                    >
-                      <i
-                        className="fa-regular fa-envelope"
-                        style={{ color: "#002864", fontSize: "19px" }}
-                      ></i>{" "}
-                      <span>{t("send-to-email")}</span>
-                    </div>
-                  </>
+                  <div
+                    className="op-btn op-btn-outline w-[50%] md:w-[35%] mt-1 group"
+                    onClick={() => {
+                      setIsSend(false);
+                      setIsMailModal(true);
+                    }}
+                  >
+                    <i className="fa-regular fa-envelope text-[19px] op-text-primary group-hover:text-base-100 "></i>{" "}
+                    <span>{t("send-to-email")}</span>
+                  </div>
                 )}
             </div>
             {!mailStatus && (
