@@ -77,6 +77,12 @@
   "password-special-char": "Das Passwort sollte ein Sonderzeichen enthalten",
   "agree": "Ich stimme den",
   "term": "Nutzungsbedingungen zu",
+  "terms-conditions": "Allgemeine Geschäftsbedingungen",
+  "privacy-policy": "Datenschutzerklärung",
+  "agree-legal": "Ich akzeptiere die",
+  "accept-terms-privacy": "Sie müssen die Allgemeinen Geschäftsbedingungen und die Datenschutzerklärung akzeptieren.",
+  "by-using-agree": "Mit der Nutzung von {{appName}} akzeptieren Sie unsere",
+  "dont-have-account": "Sie haben noch kein Konto?",
   "subscribe-to-opensign": "Abonnieren Sie den OpenSign-Newsletter",
   "register": "Registrieren",
   "sidebar": {

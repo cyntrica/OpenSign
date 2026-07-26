@@ -309,19 +309,28 @@ function Login() {
             timezone: usertimezone
           }
         };
-        const userSignUp = await Parse.Cloud.run("usersignup", params);
-        if (userSignUp && userSignUp.sessionToken) {
-          const LocalUserDetails = {
-            name: userInformation.name,
-            email: userInformation.email,
-            phone: userInformation?.phone || "",
-            company: userDetails.Company,
-            jobTitle: userDetails.JobTitle
-          };
-          localStorage.setItem("userDetails", JSON.stringify(LocalUserDetails));
-          thirdpartyLoginfn(userSignUp.sessionToken);
-        } else {
-          alert(userSignUp.message);
+        try {
+          const userSignUp = await Parse.Cloud.run("usersignup", params);
+          if (userSignUp && userSignUp.sessionToken) {
+            const LocalUserDetails = {
+              name: userInformation.name,
+              email: userInformation.email,
+              phone: userInformation?.phone || "",
+              company: userDetails.Company,
+              jobTitle: userDetails.JobTitle
+            };
+            localStorage.setItem(
+              "userDetails",
+              JSON.stringify(LocalUserDetails)
+            );
+            thirdpartyLoginfn(userSignUp.sessionToken);
+          } else {
+            alert(userSignUp.message);
+          }
+        } catch (error) {
+          console.error("Signup error:", error);
+          setThirdpartyLoader(false);
+          alert(error?.message || t("something-went-wrong-mssg"));
         }
       } else if (
         payload &&
@@ -529,16 +538,16 @@ function Login() {
                       </button>
                     </div>
                     <p className="text-xs text-center mt-3 text-base-content/60">
-                      Don&apos;t have an account?{" "}
+                      {t("dont-have-account")}{" "}
                       <NavLink to="/signup" className="op-link op-link-primary underline-offset-2 font-semibold">
-                        Create Account
+                        {t("create-account")}
                       </NavLink>
                     </p>
                     <p className="text-[11px] text-center mt-2 text-base-content/40 leading-relaxed">
-                      By using {appName}, you agree to our{" "}
-                      <Link to="/tc" target="_blank" className="underline hover:text-base-content/60">Terms &amp; Conditions</Link>
-                      {" "}and{" "}
-                      <Link to="/privacy" target="_blank" className="underline hover:text-base-content/60">Privacy Policy</Link>.
+                      {t("by-using-agree", { appName })}{" "}
+                      <Link to="/tc" target="_blank" className="underline hover:text-base-content/60">{t("terms-conditions")}</Link>
+                      {" "}{t("and")}{" "}
+                      <Link to="/privacy" target="_blank" className="underline hover:text-base-content/60">{t("privacy-policy")}</Link>.
                     </p>
                   </form>
                 </div>

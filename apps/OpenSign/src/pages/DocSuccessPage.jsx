@@ -8,6 +8,7 @@ import {
   handleDownloadCertificate,
   handleDownloadPdf,
   handleToPrint,
+  normalizeEmail,
   usertimezone,
 } from "../constant/Utils";
 import { emailRegex } from "../constant/const";
@@ -167,6 +168,7 @@ const DocSuccessPage = () => {
       user.set("name", name);
       user.set("email", signerEmail.toLowerCase().replace(/\s/g, ""));
       user.set("username", signerEmail.toLowerCase().replace(/\s/g, ""));
+      user.set("normalizedEmail", normalizeEmail(signerEmail));
       user.set("password", password);
 
       const userRes = await user.signUp();
@@ -249,7 +251,7 @@ const DocSuccessPage = () => {
       }
     } catch (error) {
       console.error("Signup error:", error);
-      if (error.code === 202) {
+      if (error.code === 202 || error.code === 203 || error.code === 137) {
         setSignupError(
           "An account with this email already exists. Please log in instead."
         );

@@ -77,6 +77,12 @@
   "password-special-char": "La password deve contenere un carattere speciale",
   "agree": "Accetto i",
   "term": "Termini di servizio",
+  "terms-conditions": "Termini e condizioni",
+  "privacy-policy": "Informativa sulla privacy",
+  "agree-legal": "Accetto i",
+  "accept-terms-privacy": "Devi accettare i Termini e condizioni e l'Informativa sulla privacy.",
+  "by-using-agree": "Utilizzando {{appName}}, accetti i nostri",
+  "dont-have-account": "Non hai un account?",
   "subscribe-to-opensign": "Iscriviti alla newsletter di OpenSign",
   "register": "Registrati",
   "sidebar": {

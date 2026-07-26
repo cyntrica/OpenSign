@@ -28,6 +28,21 @@ async function saveUser(userDetails) {
     // console.log("login ", login);
     return { id: login.objectId, sessionToken: login.sessionToken };
   } else {
+    // The username pre-check above misses case/whitespace variants that
+    // normalize to the same dedupe key — fail with a friendly error instead
+    // of letting signUp() surface the raw normalizedEmail duplicate-key error.
+    // Deliberately NOT routed into the loginAs branch: that would issue a
+    // session token without any identity verification.
+    const dupQuery = new Parse.Query(Parse.User);
+    dupQuery.equalTo('normalizedEmail', normalizedEmail);
+    const dupRes = await dupQuery.first({ useMasterKey: true });
+    if (dupRes) {
+      throw new Parse.Error(
+        Parse.Error.EMAIL_TAKEN,
+        'An account with this email already exists. Please log in instead.'
+      );
+    }
+
     const user = new Parse.User();
     user.set('username', userDetails.email);
     user.set('password', userDetails.password);
@@ -39,9 +54,26 @@ async function saveUser(userDetails) {
     }
     user.set('name', userDetails.name);
 
-    const res = await user.signUp();
-    // console.log("res ", res);
-    return { id: res.id, sessionToken: res.getSessionToken() };
+    try {
+      const res = await user.signUp();
+      // console.log("res ", res);
+      return { id: res.id, sessionToken: res.getSessionToken() };
+    } catch (err) {
+      // Race with the pre-check: parse-server maps Mongo E11000 to
+      // DUPLICATE_VALUE (137); besides username, the only unique index this
+      // insert can hit is normalizedEmail.
+      if (
+        err?.code === Parse.Error.DUPLICATE_VALUE ||
+        err?.code === 11000 ||
+        /E11000/.test(err?.message || '')
+      ) {
+        throw new Parse.Error(
+          Parse.Error.EMAIL_TAKEN,
+          'An account with this email already exists. Please log in instead.'
+        );
+      }
+      throw err;
+    }
   }
 }
 export default async function usersignup(request) {

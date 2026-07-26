@@ -77,6 +77,12 @@
   "password-special-char": " पासवर्ड में विशेष वर्ण होना चाहिए",
   "agree": "मैं सहमत हूँ",
   "term": "सेवा की शर्तें",
+  "terms-conditions": "नियम और शर्तें",
+  "privacy-policy": "गोपनीयता नीति",
+  "agree-legal": "मैं इनसे सहमत हूँ:",
+  "accept-terms-privacy": "आपको नियम और शर्तें तथा गोपनीयता नीति स्वीकार करनी होगी।",
+  "by-using-agree": "{{appName}} का उपयोग करके आप इनसे सहमत होते हैं:",
+  "dont-have-account": "खाता नहीं है?",
   "subscribe-to-opensign": "OpenSign न्यूज़लेटर की सदस्यता लें",
   "register": "पंजीकृत करें",
   "sidebar": {

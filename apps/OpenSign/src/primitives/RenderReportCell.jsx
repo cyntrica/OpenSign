@@ -84,7 +84,10 @@ export const RenderReportCell = ({
       return (
         <td key={col} className="p-2 text-center">
           {rowData?.Folder?.Name ||
-            t("sidebar.OpenSign™ Drive", { appName: drivename })}
+            t("sidebar.OpenSign™ Drive", {
+              defaultValue: `${drivename} Drive`,
+              appName: drivename
+            })}
         </td>
       );
     case "File":

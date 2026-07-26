@@ -77,6 +77,12 @@
   "password-special-char": "비밀번호는 특수 문자를 포함해야 합니다",
   "agree": "저는 동의합니다",
   "term": "서비스 약관",
+  "terms-conditions": "이용약관",
+  "privacy-policy": "개인정보 처리방침",
+  "agree-legal": "다음에 동의합니다:",
+  "accept-terms-privacy": "이용약관 및 개인정보 처리방침에 동의해야 합니다.",
+  "by-using-agree": "{{appName}}을(를) 사용하면 다음에 동의하는 것입니다:",
+  "dont-have-account": "계정이 없으신가요?",
   "subscribe-to-opensign": "OpenSign 뉴스레터 구독",
   "register": "등록",
   "sidebar": {

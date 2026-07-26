@@ -3,7 +3,12 @@ import Parse from "parse";
 import { NavLink, useNavigate, Link } from "react-router";
 import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 import { appInfo } from "../constant/appinfo";
-import { getAppLogo, saveLanguageInLocal, usertimezone } from "../constant/Utils";
+import {
+  getAppLogo,
+  normalizeEmail,
+  saveLanguageInLocal,
+  usertimezone
+} from "../constant/Utils";
 import { emailRegex } from "../constant/const";
 import { useDispatch } from "react-redux";
 import { fetchAppInfo } from "../redux/reducers/infoReducer";
@@ -101,6 +106,7 @@ function Signup() {
       user.set("name", name);
       user.set("email", email.toLowerCase().replace(/\s/g, ""));
       user.set("username", email.toLowerCase().replace(/\s/g, ""));
+      user.set("normalizedEmail", normalizeEmail(email));
       user.set("password", password);
       if (phone) user.set("phone", phone);
 
@@ -173,7 +179,7 @@ function Signup() {
       }
     } catch (error) {
       console.error("Signup error:", error);
-      if (error.code === 202) {
+      if (error.code === 202 || error.code === 203 || error.code === 137) {
         showToast("danger", "An account with this email already exists. Please log in instead.");
       } else {
         showToast("danger", error.message || t("something-went-wrong-mssg"));

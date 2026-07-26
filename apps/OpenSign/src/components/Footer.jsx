@@ -69,9 +69,9 @@ const Footer = () => {
             )}
           </p>
           <p className="mt-1 text-base-content/50">
-            <Link to="/privacy" className="hover:underline cursor-pointer">Privacy Policy</Link>
+            <Link to="/privacy" className="hover:underline cursor-pointer">{t("privacy-policy")}</Link>
             {" | "}
-            <Link to="/tc" className="hover:underline cursor-pointer">Terms &amp; Conditions</Link>
+            <Link to="/tc" className="hover:underline cursor-pointer">{t("terms-conditions")}</Link>
           </p>
         </aside>
       </footer>

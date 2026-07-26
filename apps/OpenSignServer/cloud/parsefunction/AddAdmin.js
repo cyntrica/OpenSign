@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { cloudServerUrl, serverAppId } from '../../Utils.js';
+import { cloudServerUrl, serverAppId, normalizeEmail } from '../../Utils.js';
 const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
 const APPID = serverAppId;
 const masterKEY = process.env.MASTER_KEY;
@@ -82,18 +82,46 @@ async function saveUser(userDetails) {
     // console.log("login ", login);
     return { id: login.objectId, sessionToken: login.sessionToken };
   } else {
+    // Same dedupe handling as usersignup.js: catch normalizedEmail variants
+    // the username pre-check misses, and keep the dedupe key populated.
+    const normalizedEmail = normalizeEmail(userDetails.email);
+    const dupQuery = new Parse.Query(Parse.User);
+    dupQuery.equalTo('normalizedEmail', normalizedEmail);
+    const dupRes = await dupQuery.first({ useMasterKey: true });
+    if (dupRes) {
+      throw new Parse.Error(
+        Parse.Error.EMAIL_TAKEN,
+        'An account with this email already exists. Please log in instead.'
+      );
+    }
+
     const user = new Parse.User();
     user.set('username', userDetails.email?.toLowerCase()?.replace(/\s/g, ''));
     user.set('password', userDetails.password);
     user.set('email', userDetails.email?.toLowerCase()?.replace(/\s/g, ''));
+    user.set('normalizedEmail', normalizedEmail);
     if (userDetails?.phone) {
       user.set('phone', userDetails.phone);
     }
     user.set('name', userDetails.name);
 
-    const res = await user.signUp();
-    // console.log("res ", res);
-    return { id: res.id, sessionToken: res.getSessionToken() };
+    try {
+      const res = await user.signUp();
+      // console.log("res ", res);
+      return { id: res.id, sessionToken: res.getSessionToken() };
+    } catch (err) {
+      if (
+        err?.code === Parse.Error.DUPLICATE_VALUE ||
+        err?.code === 11000 ||
+        /E11000/.test(err?.message || '')
+      ) {
+        throw new Parse.Error(
+          Parse.Error.EMAIL_TAKEN,
+          'An account with this email already exists. Please log in instead.'
+        );
+      }
+      throw err;
+    }
   }
 }
 export default async function AddAdmin(request) {

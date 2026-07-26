@@ -23,6 +23,13 @@ import {
   addPreferenceOpt
 } from "../utils";
 
+// Canonical form for the sparse-unique _User.normalizedEmail dedupe key.
+// Must stay in sync with normalizeEmail in apps/OpenSignServer/Utils.js.
+export function normalizeEmail(email) {
+  if (typeof email !== "string") return "";
+  return email.trim().toLowerCase().replace(/\s/g, "");
+}
+
 export const fontsizeArr = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28];
 export const fontColorArr = ["red", "black", "blue", "yellow"];
 export const isMobile = window.innerWidth < 767;

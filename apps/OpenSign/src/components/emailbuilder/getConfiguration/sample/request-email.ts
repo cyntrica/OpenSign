@@ -3,29 +3,39 @@ import { TEditorConfiguration } from "../../documents/editor/core";
 const getRequestEmail = (
 ): TEditorConfiguration => {
   const appName =
-    "OpenSign™";
+    localStorage.getItem("branding_appName") ||
+    localStorage.getItem("appname") ||
+    "SineSeal";
 
-  const logoBlock =
-        {
-          "block-1709571212684": {
-            type: "Image",
-            data: {
-              style: {
-                padding: { top: 24, bottom: 24, right: 24, left: 24 }
-              },
-              props: {
-                width: null,
-                height: 50,
-                url: "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png",
-                alt: "logo",
-                linkHref: null,
-                contentAlignment: "middle"
-              }
+  let logoUrl = "";
+  try {
+    const branding = JSON.parse(localStorage.getItem("branding") || "{}");
+    logoUrl = branding.emailLogoUrl || branding.logoUrl || "";
+  } catch {
+    // corrupt branding cache — render the sample without a logo block
+  }
+
+  const logoBlock: TEditorConfiguration = logoUrl
+    ? {
+        "block-1709571212684": {
+          type: "Image",
+          data: {
+            style: {
+              padding: { top: 24, bottom: 24, right: 24, left: 24 }
+            },
+            props: {
+              width: null,
+              height: 50,
+              url: logoUrl,
+              alt: "logo",
+              linkHref: null,
+              contentAlignment: "middle"
             }
           }
-        };
-  const logoBlockId =
-        ["block-1709571212684"];
+        }
+      }
+    : {};
+  const logoBlockId = logoUrl ? ["block-1709571212684"] : [];
 
   return {
     root: {

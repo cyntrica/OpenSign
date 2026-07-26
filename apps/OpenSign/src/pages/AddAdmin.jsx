@@ -4,6 +4,7 @@ import { appInfo } from "../constant/appinfo";
 import { NavLink, useNavigate, Link } from "react-router";
 import {
   getAppLogo,
+  normalizeEmail,
   saveLanguageInLocal,
   usertimezone
 } from "../constant/Utils";
@@ -109,6 +110,7 @@ const AddAdmin = () => {
           user.set("password", password);
           user.set("phone", phone);
           user.set("username", email?.toLowerCase()?.replace(/\s/g, ""));
+          user.set("normalizedEmail", normalizeEmail(email));
           const userRes = await user.save();
           if (userRes) {
             const params = {
@@ -159,6 +161,11 @@ const AddAdmin = () => {
               }
               setState({ loading: false });
             }
+          } else if (error.code === 203 || error.code === 137) {
+            // Duplicate on the normalizedEmail dedupe key (case/whitespace
+            // variant of an existing account)
+            alert(t("account-already-exists"));
+            setState({ loading: false });
           } else {
             alert(error.message);
             setState({ loading: false });
@@ -442,7 +449,7 @@ const AddAdmin = () => {
                         checked={isAuthorize}
                         onChange={(e) => setIsAuthorize(e.target.checked)}
                         onInvalid={(e) =>
-                          e.target.setCustomValidity("You must accept the Terms & Conditions and Privacy Policy.")
+                          e.target.setCustomValidity(t("accept-terms-privacy"))
                         }
                         onInput={(e) => e.target.setCustomValidity("")}
                         required
@@ -451,13 +458,13 @@ const AddAdmin = () => {
                         className="text-xs cursor-pointer mb-0 leading-relaxed"
                         htmlFor="termsandcondition"
                       >
-                        I agree to the{" "}
+                        {t("agree-legal")}{" "}
                         <Link to="/tc" target="_blank" className="op-link op-link-primary underline-offset-2">
-                          Terms &amp; Conditions
+                          {t("terms-conditions")}
                         </Link>{" "}
-                        and{" "}
+                        {t("and")}{" "}
                         <Link to="/privacy" target="_blank" className="op-link op-link-primary underline-offset-2">
-                          Privacy Policy
+                          {t("privacy-policy")}
                         </Link>.
                       </label>
                     </div>

@@ -7,6 +7,15 @@ Based on [OpenSign](https://github.com/OpenSignLabs/OpenSign) v2.35.0. Fork main
 
 ## [Unreleased] — 2026-07-26
 
+### De-branding backlog completed
+
+Finished the deferrals noted in the v2.40.1 sync entry below.
+
+- **EmailBuilder sample templates de-branded** (`request-email.ts`, `completion-email.ts`): the hardcoded `OpenSign™` footer line now uses the branded appName (same `branding_appName` localStorage read as MailTemplateEditor), and the hardcoded OpenSign logo image block now uses the branding plugin's `emailLogoUrl`/`logoUrl` — omitted entirely when no branded logo is configured. These samples seed customer-facing mail, so the upstream branding no longer leaks into sent email.
+- **`RenderReportCell` i18n key**: the Folder cell's `t("sidebar.OpenSign™ Drive")` now carries a branded "&lt;appName&gt; Drive" `defaultValue` (same pattern as Menu/SubMenu), so it no longer depends on the legacy locale key existing.
+- **i18n regression fixed**: the strings hardcoded in English by the fork's TC/Privacy link swap are now translation keys in all 7 locales (`terms-conditions`, `privacy-policy`, `agree-legal`, `accept-terms-privacy`, `by-using-agree`, `dont-have-account`) — AddAdmin's terms checkbox label + validity message, Login's signup prompt + legal blurb, and Footer's Privacy/T&C links. `agree-legal` is a new self-contained prefix (the existing `agree` key couples to `term`'s German separable-verb hack and can't be reused).
+- **Duplicate-email signup errors are friendly again**. Server side (`usersignup.js`, `addadmin.js`): the create path now pre-checks `normalizedEmail` and throws `Parse.Error` 203 (EMAIL_TAKEN) with a clear message instead of surfacing the raw duplicate-key error from the unique index, with a scoped catch around `signUp()` mapping the race-window duplicate-key (parse-server's DUPLICATE_VALUE 137) to the same 203; in practice this server path is exercised by the SSO auto-provision flow (`Login.jsx`), since `Signup.jsx`/`DocSuccessPage.jsx`/`AddAdmin.jsx` create the `_User` client-side first. The normalized-variant match deliberately does **not** reuse the existing-user `loginAs` branch (that branch issues session tokens without identity verification — flagged as its own follow-up). Client side: all three client-side creation sites now populate `normalizedEmail` (via a new `normalizeEmail` in `constant/Utils.js`, kept in sync with the server's), closing the gap where client-created accounts were invisible to the dedupe index; `Signup.jsx`/`DocSuccessPage.jsx`/`AddAdmin.jsx` map 203/137 to the same friendly message as the existing 202 case; and `Login.jsx`'s SSO signup call — previously without any error handling, leaving the loader stuck on failure — now catches and surfaces the message.
+
 ### Upstream sync — merged OpenSign v2.40.1
 
 Merged upstream tag v2.40.1 (from fork base ~v2.34; 233 upstream files changed, 12 content conflicts resolved). Fork now converges on upstream's implementations wherever adequate, with fork hardening retained as small deltas.
