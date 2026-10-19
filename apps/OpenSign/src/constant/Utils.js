@@ -2598,7 +2598,7 @@ export const embedWidgetsToDoc = async (
   } else {
     return {
       error:
-        "This pdf is not compatible with opensign please contact <support@opensignlabs.com>"
+        `This PDF is not compatible with ${appName}. Please contact your administrator.`
     };
   }
 };

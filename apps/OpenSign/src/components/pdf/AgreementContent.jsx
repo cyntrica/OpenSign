@@ -1,10 +1,13 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import ModalUi from "../../primitives/ModalUi";
+import { useBranding } from "../../../../../plugins/branding/frontend/BrandingProvider";
 
 function AgreementContent(props) {
   const { t } = useTranslation();
   const appName = localStorage.getItem("branding_appName") || "SineSeal";
+  const branding = useBranding();
+  const supportUrl = branding.footerUrl || window.location.origin;
   const h2Style = "text-base-content font-medium text-lg";
   const ulStyle = "list-disc px-4 py-3";
   const handleOnclick = () => {
@@ -99,15 +102,14 @@ function AgreementContent(props) {
                 {t("term-cond-p29", { appName: appName })}
               </span>
               <a
-                href="www.opensignlabs.com"
+                href={supportUrl}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="text-blue-700 cursor-pointer"
               >
-                www.opensignlabs.com
+                {supportUrl}
               </a>
-
-              <span>{t("term-cond-p30")}</span>
-              <span className="font-medium"> support@opensignlabs.com </span>
+              <span>.</span>
           <hr className="bg-[#9f9f9f] w-full my-[15px]" />
           <div className="mt-6 flex justify-start gap-2">
             <button

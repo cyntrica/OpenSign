@@ -736,6 +736,7 @@
     "redirect": "Fai clic sul pulsante 'Usa' per creare un nuovo documento da un modello esistente.",
     "bulksend": "Per inviare rapidamente più documenti utilizzando un modello esistente, basta inserire gli indirizzi e-mail dei destinatari e fare clic sul pulsante 'Invio massivo'. Puoi inviare fino a 50 destinatari.",
     "option": "Questo menu mostra ulteriori opzioni come Modifica, Elimina, Rinomina, Duplica, Condividi, ecc. <1>Fai clic qui</1> per saperne di più su tutte le opzioni disponibili. <3>Nota: Le modifiche a un modello esistente si applicheranno a tutti i futuri documenti creati da quel modello, ma non influenzeranno i documenti già inviati.</3>",
+    "option-nodocs": "Questo menu mostra ulteriori opzioni come Modifica, Elimina, Rinomina, Duplica, Condividi, ecc. <1>Nota: Le modifiche a un modello esistente si applicheranno a tutti i futuri documenti creati da quel modello, ma non influenzeranno i documenti già inviati.</1>",
     "signyour-self-1": "Seleziona o trascina i widget preferiti sul PDF per personalizzare il tuo documento prima della firma. Scegli i punti perfetti per ciascun widget per adattare il documento alle tue esigenze.",
     "signyour-self-2": "Trascina e rilascia ovunque in quest'area. Puoi ridimensionarlo e spostarlo in seguito.",
     "template-placeholder-1": "Facendo clic sul pulsante 'Aggiungi ruolo' potrai aggiungere vari ruoli di firmatari. Puoi assegnare utenti a ciascun ruolo nei passaggi successivi.",

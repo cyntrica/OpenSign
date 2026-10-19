@@ -23,6 +23,15 @@ Merged upstream tags v2.41.0–v2.41.3 (18 files + 7 locales; only conflicts wer
 - **Fallback logo and favicon**: `appInfo.applogo` (header, login, signup, guest login) now uses a neutral `logo-fallback.svg` wordmark instead of the OpenSign `logo.png`, and `appInfo.fev_Icon` is a neutral SVG instead of the OpenSign mark (favicon `<link>` and manifest icons now declare `image/svg+xml` for SVG sources). Branding `logoUrl`/`logoDarkUrl`/`faviconUrl` still take precedence. The header no longer reads the cached `appLogo` key, which older builds filled with the OpenSign asset URL.
 - **Locales**: `verify-email` and `daily-quota-reached` (rendered strings) no longer name OpenSign or `quotas@opensignlabs.com`, in all 7 locales. Other OpenSign-naming keys are unreferenced in the client and left as upstream to keep locale merges clean.
 
+### De-branding: certificate logo and opensignlabs links
+
+- **Completion certificate**: no longer embeds the OpenSign `images/logo.png`. It uses the branding `emailLogoUrl` (PNG/JPEG, fitted to the logo slot), else draws the app name. Uploaded logos are read through the Parse files adapter, since `/files/` URLs need a signed token; external URLs are fetched with a 5 s timeout, no redirects and a 2 MB cap. The result is cached per URL; like the email logo, a branding change takes effect after a server restart.
+- **Signer disclosure** (`AgreementContent`): the support link now points to the branding `footerUrl` (else the app's own origin) instead of `www.opensignlabs.com`, and the `support@opensignlabs.com` address is gone.
+- **Links**: the header Docs item shows only when a branding `docsUrl` is set (no `docs.opensignlabs.com` fallback); the home tour's "Star us on GitHub" (OpenSignLabs repo) is removed; the templates tour drops its docs.opensignlabs.com link via a new `tour-mssg.option-nodocs` key in all 7 locales.
+- **Error messages**: the PDF-compatibility error (client) and the three DOCX-conversion errors (`docxtopdf.js`) say "contact your administrator" instead of naming `support@opensignlabs.com`.
+- Removed the unreferenced OpenSign dark logo `public/static/js/assets/images/logo-dark.png`, which the build was copying out and serving.
+- **Not changed, needs an owner decision**: `index.html` loads Font Awesome Pro CSS from `cdn.opensignlabs.com/fonts.css`, and PDF embedding fetches Monotype Times New Roman from `cdn.opensignlabs.com/webfonts/times.ttf`. Both fonts are licensed, so they can't simply be self-hosted. `auth/authadapter.js` also defaults `SSO_API_URL` to `sso.opensignlabs.com`.
+
 ## [Unreleased] — 2026-07-26
 
 ### De-branding backlog completed

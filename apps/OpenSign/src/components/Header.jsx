@@ -23,7 +23,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
   const { width } = useWindowSize();
   const dispatch = useDispatch();
   const branding = useBranding();
-  const docsUrl = branding.docsUrl || "https://docs.opensignlabs.com";
+  const docsUrl = branding.docsUrl;
   const username = localStorage.getItem("username") || "";
   const image = localStorage.getItem("profileImg") || dp;
   const [isOpen, setIsOpen] = useState(false);
@@ -202,6 +202,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
             >
               {!isConsole && (
                 <>
+                  {docsUrl && (
                     <li
                       onClick={() =>
                         openInNewTab(docsUrl)
@@ -211,6 +212,7 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
                         <i className="fa-light fa-book"></i> {t("docs")}
                       </span>
                     </li>
+                  )}
                   <li
                     onClick={() => {
                       setIsOpen(false);

@@ -1,7 +1,54 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import fs from 'node:fs';
 import fontkit from '@pdf-lib/fontkit';
-import { formatDateTime } from '../../../Utils.js';
+import Config from 'parse-server/lib/Config.js';
+import { appName, emailLogoUrl, formatDateTime } from '../../../Utils.js';
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const logoCache = new Map(); // url -> Buffer | null (null = unusable, don't retry)
+
+const imageKind = buf =>
+  buf?.[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47
+    ? 'png'
+    : buf?.[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff
+      ? 'jpg'
+      : null;
+
+// Branded logo bytes: uploaded Parse files are read through the files adapter
+// (the /files/ route needs a signed token); external URLs are fetched with limits.
+async function loadBrandLogo(url) {
+  if (!url) return null;
+  if (logoCache.has(url)) return logoCache.get(url);
+  let buf = null;
+  try {
+    const { protocol, pathname } = new URL(url);
+    if (protocol !== 'http:' && protocol !== 'https:') throw new Error('unsupported protocol');
+    // Parse file URLs end in /files/<appId>/<name> (SERVER_URL may carry a path prefix).
+    if (pathname.includes(`/files/${Parse.applicationId}/`)) {
+      const config = Config.get(Parse.applicationId);
+      const filename = decodeURIComponent(pathname.substring(pathname.lastIndexOf('/') + 1));
+      buf = Buffer.from(await config.filesController.getFileData(config, filename));
+    } else {
+      const res = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(5000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (Number(res.headers.get('content-length')) > MAX_LOGO_BYTES) throw new Error('too large');
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of res.body) {
+        size += chunk.length;
+        if (size > MAX_LOGO_BYTES) throw new Error('too large');
+        chunks.push(chunk);
+      }
+      buf = Buffer.concat(chunks);
+    }
+    if (buf.length > MAX_LOGO_BYTES || !imageKind(buf)) buf = null;
+  } catch (err) {
+    console.warn('[branding] certificate logo unavailable:', err.message);
+    buf = null;
+  }
+  logoCache.set(url, buf);
+  return buf;
+}
 
 const formatDateStr = (dateStr, DateFormat, timezone, Is12Hr) => {
   if (!dateStr) return '';
@@ -19,10 +66,14 @@ export default async function GenerateCertificate(docDetails) {
   const fontBytes = fs.readFileSync('./font/times.ttf'); //
   pdfDoc.registerFontkit(fontkit);
   const timesRomanFont = await pdfDoc.embedFont(fontBytes, { subset: true });
-  const pngUrl = fs.readFileSync('./images/logo.png').buffer;
   const naSignUrl = fs.readFileSync('./images/na_sign.png').buffer;
   const nasign = await pdfDoc.embedPng(naSignUrl);
-  const pngImage = await pdfDoc.embedPng(pngUrl);
+  const logoBytes = await loadBrandLogo(emailLogoUrl);
+  const logoImage = logoBytes
+    ? imageKind(logoBytes) === 'png'
+      ? await pdfDoc.embedPng(logoBytes)
+      : await pdfDoc.embedJpg(logoBytes)
+    : null;
   const page = pdfDoc.addPage();
   const { width, height } = page.getSize();
   const startX = 15;
@@ -104,12 +155,18 @@ export default async function GenerateCertificate(docDetails) {
     borderColor: borderColor,
     borderWidth: 1,
   });
-  page.drawImage(pngImage, {
-    x: 30,
-    y: 790,
-    width: 100,
-    height: 25,
-  });
+  // Branded logo fitted to the 100x25 slot; app name when none is configured.
+  if (logoImage) {
+    const scale = Math.min(100 / logoImage.width, 25 / logoImage.height);
+    page.drawImage(logoImage, {
+      x: 30,
+      y: 790,
+      width: logoImage.width * scale,
+      height: logoImage.height * scale,
+    });
+  } else {
+    page.drawText(appName, { x: 30, y: 797, size: 14, font: timesRomanFont, color: titleColor });
+  }
 
   page.drawText(generatedOn, {
     x: Math.max(startX, maxX), // Adjusts dynamically 320

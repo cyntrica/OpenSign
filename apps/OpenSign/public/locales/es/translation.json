@@ -736,6 +736,7 @@
     "redirect": "Haz clic en el botón «Usar» para crear un nuevo documento desde una plantilla existente.",
     "bulksend": "Para enviar rápidamente varios documentos utilizando una plantilla existente, simplemente introduzca las direcciones de correo electrónico de los destinatarios y haga clic en el botón 'Envío masivo'. Puede enviar hasta 50 destinatarios.",
     "option": "Este menú muestra más opciones como Editar, Eliminar, Renombrar, Duplicar, Compartir, etc. <1>Haga clic aquí</1> para leer más sobre todas las opciones disponibles. <3>Nota: Los cambios en una plantilla existente se aplicarán a todos los futuros documentos creados a partir de esa plantilla, pero no afectarán a los documentos que ya se hayan enviado.</3>",
+    "option-nodocs": "Este menú muestra más opciones como Editar, Eliminar, Renombrar, Duplicar, Compartir, etc. <1>Nota: Los cambios en una plantilla existente se aplicarán a todos los futuros documentos creados a partir de esa plantilla, pero no afectarán a los documentos que ya se hayan enviado.</1>",
     "signyour-self-1": "Seleccione o arrastre sus widgets preferidos al PDF para personalizar su documento antes de firmar. Elija los lugares perfectos para cada widget y adapte el documento a sus necesidades.",
     "signyour-self-2": "Arrastra y suelta en cualquier lugar de esta área. Después podrás cambiar el tamaño y moverlo.",
     "template-placeholder-1": "Hacer clic en el botón «Agregar rol» te permitirá agregar varios roles de firmantes. Puedes asociar usuarios a cada rol en los siguientes pasos.",
