@@ -38,6 +38,15 @@ Merged upstream tags v2.41.0–v2.41.3 (18 files + 7 locales; only conflicts wer
 - **SSO**: `SSO_API_URL` no longer defaults to `sso.opensignlabs.com`. When it is unset, SSO auth is rejected ("SSO is not configured") without a network call. The client has no SSO login, so nothing visible changes.
 - Still external: signature fonts from Google Fonts (`src/styles/signature.css`) and Bootstrap 4 CSS from jsDelivr (`index.html`).
 
+### Fix: uploaded email logos broken in sent emails
+
+Logos uploaded through the Branding page are stored as plain Parse file URLs, and the server's `/files/` guard rejects any request without a signed token. Server-built emails embedded that unsigned URL, so recipients saw a broken image. Client-built emails (signature request template, EmailBuilder samples) embedded the 1-hour signed URL from `branding_getSettings`, so they broke once the token expired. Logos set as an external URL were unaffected.
+
+- **New public route** `GET /branding/email-logo` (`cloud/customRoute/brandingEmailLogo.js`; public URL `<host>/api/branding/email-logo`): serves the branding `emailLogoUrl`, else `logoUrl`. Uploaded files are read through the Parse files adapter and sent with a magic-byte content type (PNG/JPEG/GIF only), `nosniff` and a 1-day cache; external URLs get a 302. Settings and bytes are cached for 5 minutes.
+- **Emails use it**: server `getEmailLogoSrc()` (`Utils.js`) and client `getEmailLogoSrc()` (`constant/emailLogo.js`) return `<route>?v=<file name>` for uploaded logos (the file name busts caches on re-upload), or the external URL as-is. Used by every email template that had a logo, and by the EmailBuilder samples.
+- **Branding changes apply without a restart**: an `afterSave` on `branding_Settings` reloads the server's app name and email logo and resets the route cache. On multi-instance deploys, only the instance that handled the save refreshes. The server email logo now also falls back to `logoUrl`, matching the client. Logo-file reading is shared with the completion certificate (`utils/brandLogo.js`).
+- Custom mail templates saved earlier from an EmailBuilder sample may still contain an expired signed logo URL; re-insert the logo or reload the sample to fix them.
+
 ## [Unreleased] — 2026-07-26
 
 ### De-branding backlog completed

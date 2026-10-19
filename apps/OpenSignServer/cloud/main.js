@@ -142,9 +142,16 @@ Parse.Cloud.define('createdocumentfromapp', createDocumentFromApp);
 // Express routes, jobs, and hooks. All plugin code lives in /plugins/.
 import { loadPlugins, runHooks } from '../../../plugins/_loader/backend.js';
 import * as Utils from '../Utils.js';
+import { resetEmailLogoCache } from './customRoute/brandingEmailLogo.js';
 
 // Make runHooks available globally for instrumented core functions (e.g. PDF.js)
 globalThis.__pluginHooks = { runHooks };
+
+// Keep server-side branding (appName, email logo) current without a restart.
+Parse.Cloud.afterSave('branding_Settings', () => {
+  resetEmailLogoCache();
+  return Utils.initAppNameFromBranding();
+});
 
 loadPlugins(Utils).then(() => {
   delete globalThis.__pluginExpressApp;

@@ -11,6 +11,7 @@ import {
 } from "pdf-lib";
 import Parse from "parse";
 import { appInfo } from "./appinfo";
+import { getEmailLogoSrc } from "./emailLogo";
 import { saveAs } from "file-saver";
 import printModule from "print-js";
 import fontkit from "@pdf-lib/fontkit";
@@ -4226,13 +4227,7 @@ function _removeWidgetAnnotations(pdfDoc) {
 
 export const mailTemplate = (param) => {
   const appName = localStorage.getItem("branding_appName") || "SineSeal";
-  let logoUrl = "";
-  try {
-    const branding = JSON.parse(localStorage.getItem("branding") || "{}");
-    logoUrl = branding.emailLogoUrl || branding.logoUrl || "";
-  } catch {
-    // corrupt branding cache: render without a logo block
-  }
+  const logoUrl = getEmailLogoSrc();
   const logo = logoUrl
     ? `<div style='padding:10px'><img src='${logoUrl}' height='50' /></div>`
     : "";

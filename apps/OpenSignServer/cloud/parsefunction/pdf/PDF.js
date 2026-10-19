@@ -8,7 +8,7 @@ import {
   saveFileUsage,
   getSecureUrl,
   appName,
-  emailLogoUrl,
+  getEmailLogoSrc,
   escapeHtml,
   contactEmail,
   serverAppId,
@@ -155,8 +155,9 @@ async function updateDoc(
 async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
   try {
     const TenantAppName = appName;
-    const logo = emailLogoUrl
-      ? `<img src='${emailLogoUrl}' height='50' style='padding:20px'/>`
+    const logoSrc = getEmailLogoSrc();
+    const logo = logoSrc
+      ? `<img src='${logoSrc}' height='50' style='padding:20px'/>`
       : '';
     const auditTrailCount =
       doc?.AuditTrail?.filter(x => COMPLETION_ACTIVITIES.includes(x.Activity))?.length || 0;
@@ -203,8 +204,9 @@ async function sendCompletedMail(obj) {
   const sender = obj.doc.ExtUserPtr;
   const pdfName = doc.Name;
   const TenantAppName = appName;
-  const logo = emailLogoUrl
-    ? `<img src='${emailLogoUrl}' height='50' style='padding:20px'/>`
+  const logoSrc = getEmailLogoSrc();
+  const logo = logoSrc
+    ? `<img src='${logoSrc}' height='50' style='padding:20px'/>`
     : '';
   let signersMail;
   if (doc?.Signers?.length > 0) {

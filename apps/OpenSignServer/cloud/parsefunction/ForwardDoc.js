@@ -1,4 +1,4 @@
-import { appName, emailLogoUrl, emailRegex, escapeHtml } from '../../Utils.js';
+import { appName, emailRegex, escapeHtml, getEmailLogoSrc } from '../../Utils.js';
 import sendMailWithAttachment from './sendMailWithAttachment.js';
 
 export default async function forwardDoc(request) {
@@ -39,8 +39,9 @@ export default async function forwardDoc(request) {
       }
 
       try {
-        const logo = emailLogoUrl
-          ? `<img src='${emailLogoUrl}' height='50' style='padding:20px'/>`
+        const logoSrc = getEmailLogoSrc();
+        const logo = logoSrc
+          ? `<img src='${logoSrc}' height='50' style='padding:20px'/>`
           : '';
         const themeColor = '#47a3ad';
 

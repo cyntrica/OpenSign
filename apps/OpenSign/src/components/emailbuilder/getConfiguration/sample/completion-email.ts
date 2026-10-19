@@ -1,4 +1,5 @@
 import { TEditorConfiguration } from "../../documents/editor/core";
+import { getEmailLogoSrc } from "../../../../constant/emailLogo";
 
 const getCompletionEmail = (
 ): TEditorConfiguration => {
@@ -7,13 +8,7 @@ const getCompletionEmail = (
     localStorage.getItem("appname") ||
     "SineSeal";
 
-  let logoUrl = "";
-  try {
-    const branding = JSON.parse(localStorage.getItem("branding") || "{}");
-    logoUrl = branding.emailLogoUrl || branding.logoUrl || "";
-  } catch {
-    // corrupt branding cache — render the sample without a logo block
-  }
+  const logoUrl = getEmailLogoSrc();
 
   const logoBlock: TEditorConfiguration = logoUrl
     ? {

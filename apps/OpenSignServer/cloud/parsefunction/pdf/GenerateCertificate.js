@@ -1,18 +1,14 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import fs from 'node:fs';
 import fontkit from '@pdf-lib/fontkit';
-import Config from 'parse-server/lib/Config.js';
+import { imageMime, isParseFileUrl, readParseFileBytes } from '../../../utils/brandLogo.js';
 import { appName, emailLogoUrl, formatDateTime } from '../../../Utils.js';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const logoCache = new Map(); // url -> Buffer | null (null = unusable, don't retry)
 
-const imageKind = buf =>
-  buf?.[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47
-    ? 'png'
-    : buf?.[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff
-      ? 'jpg'
-      : null;
+// pdf-lib embeds PNG and JPEG only.
+const imageKind = buf => ({ 'image/png': 'png', 'image/jpeg': 'jpg' })[imageMime(buf)] || null;
 
 // Branded logo bytes: uploaded Parse files are read through the files adapter
 // (the /files/ route needs a signed token); external URLs are fetched with limits.
@@ -21,13 +17,10 @@ async function loadBrandLogo(url) {
   if (logoCache.has(url)) return logoCache.get(url);
   let buf = null;
   try {
-    const { protocol, pathname } = new URL(url);
+    const { protocol } = new URL(url);
     if (protocol !== 'http:' && protocol !== 'https:') throw new Error('unsupported protocol');
-    // Parse file URLs end in /files/<appId>/<name> (SERVER_URL may carry a path prefix).
-    if (pathname.includes(`/files/${Parse.applicationId}/`)) {
-      const config = Config.get(Parse.applicationId);
-      const filename = decodeURIComponent(pathname.substring(pathname.lastIndexOf('/') + 1));
-      buf = Buffer.from(await config.filesController.getFileData(config, filename));
+    if (isParseFileUrl(url)) {
+      buf = await readParseFileBytes(url);
     } else {
       const res = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(5000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -12,6 +12,7 @@ import {
   PDFDict,
 } from 'pdf-lib';
 import { parseUploadFile } from './utils/fileUtils.js';
+import { isParseFileUrl, parseFileName } from './utils/brandLogo.js';
 
 dotenv.config({ quiet: true });
 
@@ -48,20 +49,25 @@ export async function initAppNameFromBranding() {
   try {
     const query = new Parse.Query('branding_Settings');
     const settings = await query.first({ useMasterKey: true });
-    if (settings?.get('appName')) {
-      appName = settings.get('appName');
-      console.log(`[branding] Server appName set to: ${appName}`);
-    }
-    if (settings?.get('emailLogoUrl')) {
-      emailLogoUrl = settings.get('emailLogoUrl');
-      console.log(`[branding] Server emailLogoUrl set`);
-    }
-    if (settings?.get('contactEmail')) {
-      contactEmail = settings.get('contactEmail');
-    }
+    // Also re-run on every branding_Settings save, so cleared fields reset to defaults.
+    appName = settings?.get('appName') || 'SineSeal';
+    // Same fallback as the client and the /branding/email-logo route.
+    emailLogoUrl = settings?.get('emailLogoUrl') || settings?.get('logoUrl') || '';
+    contactEmail = settings?.get('contactEmail') || '';
+    console.log(`[branding] Server appName set to: ${appName}`);
   } catch (err) {
     console.warn('[branding] Could not load appName from branding_Settings:', err.message);
   }
+}
+// <img src> for the branded email logo. Uploaded logos are Parse files behind the
+// signed-token guard, so emails use the stable /branding/email-logo route instead.
+export function getEmailLogoSrc() {
+  if (!emailLogoUrl) return '';
+  if (!isParseFileUrl(emailLogoUrl)) return emailLogoUrl;
+  const mount = process.env.PARSE_MOUNT || '/app';
+  const serverUrl = (process.env.SERVER_URL || '').replace(/\/+$/, '');
+  const root = serverUrl.endsWith(mount) ? serverUrl.slice(0, -mount.length) : serverUrl;
+  return `${root}/branding/email-logo?v=${encodeURIComponent(parseFileName(emailLogoUrl))}`;
 }
 export const prefillDraftDocWidget = ['date', 'textbox', 'checkbox', 'radio button', 'image'];
 export const prefillDraftTemWidget = [
@@ -729,7 +735,8 @@ export const mailTemplate = param => {
   const subject = `${param.senderName} has requested you to sign "${param.title}"`;
   const AppName = appName;
   // No branded logo configured: omit the image rather than fall back to upstream's.
-  const logo = emailLogoUrl ? `<div style='padding:10px'><img src='${emailLogoUrl}' height='50' /></div>` : '';
+  const logoSrc = getEmailLogoSrc();
+  const logo = logoSrc ? `<div style='padding:10px'><img src='${logoSrc}' height='50' /></div>` : '';
 
   const body =
     "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background:white;padding-bottom:20px'>" +

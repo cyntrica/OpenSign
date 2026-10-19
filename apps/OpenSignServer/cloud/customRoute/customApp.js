@@ -6,6 +6,7 @@ import docxtopdf, { upload as docxUpload } from './docxtopdf.js';
 import decryptpdf, { upload as decryptUpload } from './decryptpdf.js';
 import { deleteUserByAdmin, deleteUserPost } from './deleteAccount/deleteUser.js';
 import { deleteUserGet } from './deleteAccount/deleteUserGet.js';
+import brandingEmailLogo from './brandingEmailLogo.js';
 import { deleteUserOtp } from './deleteAccount/deleteUserOtp.js';
 
 export const app = express();
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.post('/docxtopdf', docxUpload.single('file'), docxtopdf);
 app.post('/decryptpdf', decryptUpload.single('file'), decryptpdf);
 app.get('/delete-account/:userId', deleteUserGet);
+app.get('/branding/email-logo', brandingEmailLogo);
 app.post('/delete-account/:userId/otp', deleteUserOtp);
 app.post('/delete-account/:userId', deleteUserPost);
 app.post('/deleteuser/:userId', deleteUserByAdmin);
