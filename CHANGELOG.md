@@ -1,9 +1,20 @@
 # Changelog — SineSeal (OpenSign Fork)
 
 All notable changes to the SineSeal fork of OpenSign are documented here.
-Based on [OpenSign](https://github.com/OpenSignLabs/OpenSign) v2.35.0. Fork maintained at [cyntrica/OpenSign](https://github.com/cyntrica/OpenSign).
+Based on [OpenSign](https://github.com/OpenSignLabs/OpenSign) v2.41.3. Fork maintained at [cyntrica/OpenSign](https://github.com/cyntrica/OpenSign).
 
 ---
+
+## [Unreleased] — 2026-10-18
+
+### Upstream sync — merged OpenSign v2.41.3
+
+Merged upstream tags v2.41.0–v2.41.3 (18 files + 7 locales; only conflicts were the per-app lockfiles, kept untracked).
+
+- **Upstream fixes on board**: widget/prefill/placeholder fixes, `OriginIp` on app-created documents, RFC 2047-encoded non-ASCII From names for the Gmail provider (`encodeMimeAddress`).
+- **Deps**: nodemailer 8 → 9 (only breaking change is TLS validation on remote-URL attachments; fork mail attaches Buffers, unaffected), sharp 0.35 (needs Node >= 20.9; images use 22.14), parse-server 8.6.84, axios 1.18, react-router 7.18, plus upstream's security `overrides`.
+- **Fork deviation**: `createBatchDocs` keeps the server-derived `public_url` for signing links. Upstream switched to the client-supplied `Origin` header, which would let any authenticated caller point links in SineSeal-sent emails at an arbitrary domain.
+- Client `package.json` version set to 2.41.3.
 
 ## [Unreleased] — 2026-07-26
 

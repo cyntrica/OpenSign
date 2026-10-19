@@ -327,7 +327,8 @@ export default async function createBatchDocs(request) {
   const Documents = JSON.parse(strDocuments);
 
   const Ip = request?.headers?.['x-real-ip'] || '';
-  // Access the host from the headers
+  // SineSeal: server-derived public_url only. Upstream's client-supplied Origin
+  // would let a caller point signing links in our emails at any domain.
   const publicUrl = request.headers.public_url;
   const parseConfig = {
     baseURL: serverUrl,
