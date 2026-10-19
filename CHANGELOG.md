@@ -47,6 +47,14 @@ Logos uploaded through the Branding page are stored as plain Parse file URLs, an
 - **Branding changes apply without a restart**: an `afterSave` on `branding_Settings` reloads the server's app name and email logo and resets the route cache. On multi-instance deploys, only the instance that handled the save refreshes. The server email logo now also falls back to `logoUrl`, matching the client. Logo-file reading is shared with the completion certificate (`utils/brandLogo.js`).
 - Custom mail templates saved earlier from an EmailBuilder sample may still contain an expired signed logo URL; re-insert the logo or reload the sample to fix them.
 
+### Fix: `FILE_SIGNING_SECRET` broke signed file URLs
+
+The branding plugin signed `/files/` URLs with `FILE_SIGNING_SECRET || MASTER_KEY`, but the server's file guard (`validateSignedLocalUrl`) verified with `MASTER_KEY` only. Setting `FILE_SIGNING_SECRET`, as the plugin recommended for production, made every branding logo, favicon and login image return 400. It was not set in `.env.example` or `.env.local_dev`, so the bug was latent.
+
+- `getSignedUrl.js` (`getSignedLocalUrl`, `presignedlocalUrl`, `validateSignedLocalUrl`) and the branding `signFileUrl` now use the same secret, `FILE_SIGNING_SECRET || MASTER_KEY`, read per call. With a dedicated secret set, `MASTER_KEY` no longer signs file URLs at all. Tokens are short-lived (200 s server, 1 h branding) and never stored, so setting or rotating the secret only invalidates in-flight URLs.
+- Verified with a round-trip script, with and without the secret: plugin- and server-signed URLs validate; tampered, expired and wrong-secret tokens are rejected. The old verifier rejected plugin tokens once the secret was set.
+- `.env.example` documents `FILE_SIGNING_SECRET` (commented out).
+
 ## [Unreleased] — 2026-07-26
 
 ### De-branding backlog completed
@@ -139,7 +147,7 @@ Full codebase audit covering core server modifications, plugin loader, branding 
 - Class name injection via `userDetails.role` → validated against `ALLOWED_ROLE_PREFIXES` allowlist.
 - Plugin route method not validated → whitelist: `get`, `post`, `put`, `patch`, `delete`.
 - Plugin hook ran before field validation → moved hooks to after validation in `DocumentBeforesave`.
-- JWT file URLs signed with MASTER_KEY → uses `FILE_SIGNING_SECRET` env var (falls back to MASTER_KEY).
+- JWT file URLs signed with MASTER_KEY → uses `FILE_SIGNING_SECRET` env var (falls back to MASTER_KEY). *(Branding signer only until 2026-10-18; the server verifier kept using MASTER_KEY. See the 2026-10-18 fix.)*
 - Branding schema seed race condition → duplicate-key error handling in both branding and membership setup.
 - Stale branding cache no TTL → 24-hour cache expiration with `_cachedAt` timestamp; retry on fetch failure.
 - `NavLink` used for external URLs → replaced with `<a>` tags in `SocialMedia.jsx`.
@@ -170,7 +178,7 @@ Full codebase audit covering core server modifications, plugin loader, branding 
 - Hardcoded OpenSign docs URL → configurable via `branding.docsUrl`.
 
 **New environment variables:**
-- `FILE_SIGNING_SECRET` — Dedicated secret for JWT-signed file URLs (optional; falls back to `MASTER_KEY`).
+- `FILE_SIGNING_SECRET` — Dedicated secret for JWT-signed file URLs (optional; falls back to `MASTER_KEY`). Shared by the server and the branding plugin; changing it invalidates outstanding signed URLs.
 - `STRIPE_API_VERSION` — Override Stripe API version (optional; defaults to `2024-12-18.acacia`).
 
 **New files:**

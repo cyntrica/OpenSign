@@ -24,23 +24,24 @@ function jwtSign(payload, secret) {
   return `${header}.${body}.${signature}`;
 }
 
+// Uses dedicated FILE_SIGNING_SECRET if set, falls back to MASTER_KEY. Must match the
+// server's verifier (apps/OpenSignServer/cloud/parsefunction/getSignedUrl.js).
+// Read per call so it doesn't depend on when dotenv runs.
+const fileSigningSecret = () => process.env.FILE_SIGNING_SECRET || process.env.MASTER_KEY;
+
 /**
  * Sign a local Parse file URL with a JWT token.
  * @param {string} url - The file URL (must contain "files" in the path)
  * @param {number} [expirationSeconds=3600] - Token expiry in seconds (default 1 hour)
  * @returns {string} The URL with ?token=... appended
  */
-// Uses dedicated FILE_SIGNING_SECRET if set, falls back to MASTER_KEY.
-// In production, set FILE_SIGNING_SECRET to a separate random secret.
-const FILE_SIGNING_SECRET = process.env.FILE_SIGNING_SECRET || process.env.MASTER_KEY;
-
 export function signFileUrl(url, expirationSeconds = 3600) {
   if (!url || typeof url !== 'string' || !url.includes('files')) {
     return url;
   }
 
   const fileUrl = url.split('?')[0]; // Strip any existing query params
-  const secretKey = FILE_SIGNING_SECRET;
+  const secretKey = fileSigningSecret();
 
   if (!secretKey) {
     console.warn('[branding] FILE_SIGNING_SECRET / MASTER_KEY not set — cannot sign file URL');

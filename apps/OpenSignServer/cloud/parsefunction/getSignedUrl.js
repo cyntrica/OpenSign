@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import { isAuthenticated } from '../../utils/AuthUtils.js';
 dotenv.config({ quiet: true });
 
+// Secret for local /files/ URL tokens. Must match plugins/branding/backend/lib/signFileUrl.js.
+const fileSigningSecret = () => process.env.FILE_SIGNING_SECRET || process.env.MASTER_KEY;
+
 function extractKeyFromUrl(url) {
   // Create a new URL object
   const parsedUrl = new URL(url);
@@ -127,7 +130,7 @@ export async function getSignedUrl(request) {
 
 // Function to generate a signed URL with JWT
 export function getSignedLocalUrl(fileUrl, expirationTimeInSeconds) {
-  const secretKey = process.env.MASTER_KEY;
+  const secretKey = fileSigningSecret();
   const exp = expirationTimeInSeconds || 200;
   try {
     // Create the payload with the file URL and expiration time
@@ -149,7 +152,7 @@ export function getSignedLocalUrl(fileUrl, expirationTimeInSeconds) {
 export function presignedlocalUrl(signedUrl, expirationTimeInSeconds) {
   if (signedUrl?.includes('/files/')) {
     const fileUrl = signedUrl.split('?')?.[0];
-    const secretKey = process.env.MASTER_KEY;
+    const secretKey = fileSigningSecret();
     const exp = expirationTimeInSeconds || 200;
     try {
       // Create the payload with the file URL and expiration time
@@ -177,7 +180,7 @@ export async function validateSignedLocalUrl(signedUrl) {
     if (!token) {
       throw new Error('No token provided.');
     }
-    const secretKey = process.env.MASTER_KEY;
+    const secretKey = fileSigningSecret();
     // Now verify the token (validate signature and expiration automatically)
     const decoded = jwt.verify(token, secretKey);
     // Check if the file URL in the JWT matches the requested file URL
