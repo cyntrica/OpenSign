@@ -1,6 +1,8 @@
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import "./styles/dark-theme-improvements.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
+import "./styles/fa-pro-shim.css";
 import App from "./App";
 import { showUpgradeProgress, hideUpgradeProgress } from "./utils";
 import { Provider } from "react-redux";

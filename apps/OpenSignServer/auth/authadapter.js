@@ -1,10 +1,14 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config({ quiet: true });
-const ssoApiUrl = process.env.SSO_API_URL || 'https://sso.opensignlabs.com/api'; //'https://osl-jacksonv2.vercel.app/api';
+// No default provider: SSO logins are rejected unless SSO_API_URL is set.
+const ssoApiUrl = process.env.SSO_API_URL || '';
 export const SSOAuth = {
   // Returns a promise that fulfills if this user mail is valid.
   validateAuthData: async authData => {
+    if (!ssoApiUrl) {
+      throw new Parse.Error(Parse.Error.OBJECT_NOT_FOUND, 'SSO is not configured.');
+    }
     try {
       const response = await axios.get(ssoApiUrl + '/oauth/userinfo', {
         headers: {

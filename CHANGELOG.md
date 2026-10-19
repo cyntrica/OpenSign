@@ -30,7 +30,13 @@ Merged upstream tags v2.41.0–v2.41.3 (18 files + 7 locales; only conflicts wer
 - **Links**: the header Docs item shows only when a branding `docsUrl` is set (no `docs.opensignlabs.com` fallback); the home tour's "Star us on GitHub" (OpenSignLabs repo) is removed; the templates tour drops its docs.opensignlabs.com link via a new `tour-mssg.option-nodocs` key in all 7 locales.
 - **Error messages**: the PDF-compatibility error (client) and the three DOCX-conversion errors (`docxtopdf.js`) say "contact your administrator" instead of naming `support@opensignlabs.com`.
 - Removed the unreferenced OpenSign dark logo `public/static/js/assets/images/logo-dark.png`, which the build was copying out and serving.
-- **Not changed, needs an owner decision**: `index.html` loads Font Awesome Pro CSS from `cdn.opensignlabs.com/fonts.css`, and PDF embedding fetches Monotype Times New Roman from `cdn.opensignlabs.com/webfonts/times.ttf`. Both fonts are licensed, so they can't simply be self-hosted. `auth/authadapter.js` also defaults `SSO_API_URL` to `sso.opensignlabs.com`.
+
+### De-branding: self-hosted free fonts, no OpenSign SSO default
+
+- **Icons**: Font Awesome Pro CSS from `cdn.opensignlabs.com/fonts.css` replaced by Font Awesome Free 6.7.2, installed from npm (`@fortawesome/fontawesome-free`, exact pin) and bundled by Vite, so icon webfonts are self-hosted. `src/styles/fa-pro-shim.css` maps Pro's `fa-light` onto Free without touching the ~370 JSX call sites: the Free regular (outline) glyph where one exists (38 icons), otherwise solid, so those render heavier than the Pro light style. The Pro-only `fa-message-sms`, `fa-message-lines` and `fa-grid-2` are aliased to `comment-sms`, `message` and `table-cells-large`. All 135 icon classes in use were checked to render. Social-link icons stored in branding settings must use `fa-brands`/`fa-solid`/`fa-regular`.
+- **PDF font**: Monotype Times New Roman (client fetch from `cdn.opensignlabs.com/webfonts/times.ttf`, and the `font/times.ttf` committed for the server certificate) replaced by Liberation Serif 2.1.5 (SIL OFL 1.1, metric-compatible with Times New Roman), with its license alongside, in `apps/OpenSign/src/assets/fonts` and `apps/OpenSignServer/font`.
+- **SSO**: `SSO_API_URL` no longer defaults to `sso.opensignlabs.com`. When it is unset, SSO auth is rejected ("SSO is not configured") without a network call. The client has no SSO login, so nothing visible changes.
+- Still external: signature fonts from Google Fonts (`src/styles/signature.css`) and Bootstrap 4 CSS from jsDelivr (`index.html`).
 
 ## [Unreleased] — 2026-07-26
 

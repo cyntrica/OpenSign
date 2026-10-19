@@ -63,7 +63,7 @@ export default async function GenerateCertificate(docDetails) {
   const DateFormat = docDetails?.ExtUserPtr?.DateFormat || 'MM/DD/YYYY';
   const pdfDoc = await PDFDocument.create();
   // `fontBytes` is used to embed custom font in pdf
-  const fontBytes = fs.readFileSync('./font/times.ttf'); //
+  const fontBytes = fs.readFileSync('./font/LiberationSerif-Regular.ttf');
   pdfDoc.registerFontkit(fontkit);
   const timesRomanFont = await pdfDoc.embedFont(fontBytes, { subset: true });
   const naSignUrl = fs.readFileSync('./images/na_sign.png').buffer;

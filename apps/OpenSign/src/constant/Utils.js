@@ -17,6 +17,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { SCALE_STEPS, themeColor } from "./const";
 import { format, toZonedTime } from "date-fns-tz";
 import i18n from "../i18n";
+import serifFontUrl from "../assets/fonts/LiberationSerif-Regular.ttf?url";
 import {
   applyNumberFormulasToPages,
   buildDownloadFilename,
@@ -1512,9 +1513,7 @@ export const addInitialData = (signerPos, setXyPosition, value, userId) => {
 export const embedDocId = async (pdfOriginalWH, pdfDoc, documentId) => {
   const appName = localStorage.getItem("branding_appName") || "SineSeal";
   // `fontBytes` is used to embed custom font in pdf
-  const fontBytes = await fileasbytes(
-    "https://cdn.opensignlabs.com/webfonts/times.ttf"
-  );
+  const fontBytes = await fileasbytes(serifFontUrl);
   pdfDoc.registerFontkit(fontkit);
   const font = await pdfDoc.embedFont(fontBytes, { subset: true });
   //pdfOriginalWH contained all pdf's pages width and height
@@ -2058,9 +2057,7 @@ export const embedWidgetsToDoc = async (
   prefillImg
 ) => {
   // `fontBytes` is used to embed custom font in pdf
-  const fontBytes = await fileasbytes(
-    "https://cdn.opensignlabs.com/webfonts/times.ttf"
-  );
+  const fontBytes = await fileasbytes(serifFontUrl);
   pdfDoc.registerFontkit(fontkit);
   const font = await pdfDoc.embedFont(fontBytes, { subset: true });
   let hasError = false;

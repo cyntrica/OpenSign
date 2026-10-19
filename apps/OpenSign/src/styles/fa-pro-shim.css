@@ -1,0 +1,69 @@
+/* Maps Font Awesome Pro classes onto self-hosted Font Awesome Free 6.
+   "fa-light" renders the Free regular (outline) glyph where one exists, else solid. */
+.fa-light {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: var(--fa-display, inline-block);
+  font-style: normal;
+  font-variant: normal;
+  line-height: 1;
+  text-rendering: auto;
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+}
+.fa-light::before {
+  content: var(--fa);
+}
+
+.fa-light.fa-address-book,
+.fa-light.fa-address-card,
+.fa-light.fa-bell,
+.fa-light.fa-bookmark,
+.fa-light.fa-building,
+.fa-light.fa-calendar,
+.fa-light.fa-calendar-days,
+.fa-light.fa-check-circle,
+.fa-light.fa-check-square,
+.fa-light.fa-circle-check,
+.fa-light.fa-circle-dot,
+.fa-light.fa-clipboard,
+.fa-light.fa-clock,
+.fa-light.fa-copy,
+.fa-light.fa-credit-card,
+.fa-light.fa-edit,
+.fa-light.fa-envelope,
+.fa-light.fa-eye,
+.fa-light.fa-eye-slash,
+.fa-light.fa-file,
+.fa-light.fa-file-lines,
+.fa-light.fa-floppy-disk,
+.fa-light.fa-folder,
+.fa-light.fa-hard-drive,
+.fa-light.fa-image,
+.fa-light.fa-moon,
+.fa-light.fa-newspaper,
+.fa-light.fa-paper-plane,
+.fa-light.fa-pen-to-square,
+.fa-light.fa-plus-square,
+.fa-light.fa-save,
+.fa-light.fa-share-from-square,
+.fa-light.fa-square-check,
+.fa-light.fa-square-plus,
+.fa-light.fa-thumbs-down,
+.fa-light.fa-times-circle,
+.fa-light.fa-trash-can,
+.fa-light.fa-user,
+.fa-light.fa-message-lines {
+  font-weight: 400;
+}
+
+/* Pro-only icons: nearest Free glyph. */
+.fa-message-sms {
+  --fa: "\f7cd"; /* comment-sms */
+}
+.fa-message-lines {
+  --fa: "\f27a"; /* message */
+}
+.fa-grid-2 {
+  --fa: "\f009"; /* table-cells-large */
+}
