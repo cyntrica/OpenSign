@@ -56,12 +56,8 @@ const Header = ({ isConsole, setIsLoggingOut }) => {
 
   async function initializeHead() {
       const applogo = await getAppLogo();
-      if (applogo?.logo) {
-        setAppLogo(applogo?.logo);
-      } else {
-        const logo = localStorage.getItem("appLogo") || appInfo.applogo;
-        setAppLogo(logo);
-      }
+      // Skip the cached "appLogo": older builds stored the bundled upstream logo's URL there.
+      setAppLogo(applogo?.logo || appInfo.applogo);
   }
   const handleLogout = async () => {
     setIsOpen(false);

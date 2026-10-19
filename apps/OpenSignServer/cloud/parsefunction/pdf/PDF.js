@@ -155,8 +155,9 @@ async function updateDoc(
 async function sendNotifyMail(doc, signUser, mailProvider, publicUrl) {
   try {
     const TenantAppName = appName;
-    const logo =
-      `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
+    const logo = emailLogoUrl
+      ? `<img src='${emailLogoUrl}' height='50' style='padding:20px'/>`
+      : '';
     const auditTrailCount =
       doc?.AuditTrail?.filter(x => COMPLETION_ACTIVITIES.includes(x.Activity))?.length || 0;
     const completionRelevant =
@@ -202,8 +203,9 @@ async function sendCompletedMail(obj) {
   const sender = obj.doc.ExtUserPtr;
   const pdfName = doc.Name;
   const TenantAppName = appName;
-  const logo =
-    `<img src='${emailLogoUrl || "https://qikinnovation.ams3.digitaloceanspaces.com/logo.png"}' height='50' style='padding:20px'/>`;
+  const logo = emailLogoUrl
+    ? `<img src='${emailLogoUrl}' height='50' style='padding:20px'/>`
+    : '';
   let signersMail;
   if (doc?.Signers?.length > 0) {
     const isOwnerExistsinSigners = doc?.Signers?.find(x => x.Email === sender.Email);

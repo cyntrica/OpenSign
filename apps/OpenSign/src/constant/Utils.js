@@ -4229,7 +4229,16 @@ function _removeWidgetAnnotations(pdfDoc) {
 
 export const mailTemplate = (param) => {
   const appName = localStorage.getItem("branding_appName") || "SineSeal";
-  const logo = `<div style='padding:10px'><img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' /></div>`;
+  let logoUrl = "";
+  try {
+    const branding = JSON.parse(localStorage.getItem("branding") || "{}");
+    logoUrl = branding.emailLogoUrl || branding.logoUrl || "";
+  } catch {
+    // corrupt branding cache: render without a logo block
+  }
+  const logo = logoUrl
+    ? `<div style='padding:10px'><img src='${logoUrl}' height='50' /></div>`
+    : "";
 
   const subject = `${param.senderName} has requested you to sign "${param.title}"`;
   const body =

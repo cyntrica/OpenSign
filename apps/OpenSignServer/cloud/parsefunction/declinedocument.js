@@ -4,8 +4,9 @@ import sendSystemMail from './sendSystemMail.js';
 async function sendDeclineMail(doc, publicUrl, userId, reason) {
   try {
     const TenantAppName = appName;
-    const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
-    const logo = `<img src='${logoSrc}' height='50' style='padding:20px'/>`;
+    const logo = emailLogoUrl
+      ? `<img src='${emailLogoUrl}' height='50' style='padding:20px'/>`
+      : '';
     const removePrefill =
       doc?.Placeholders?.length > 0 && doc?.Placeholders?.filter(x => x?.Role !== 'prefill');
     const signUser =

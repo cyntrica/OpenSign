@@ -1,4 +1,4 @@
-import logo from "../assets/images/logo.png";
+import logo from "../assets/images/logo-fallback.svg";
 import { getEnv } from "./Utils";
 
 export function serverUrl_fn() {
@@ -14,8 +14,9 @@ export const appInfo = {
   appId: process.env.REACT_APP_APPID ? process.env.REACT_APP_APPID : "opensign",
   baseUrl: serverUrl_fn(),
   defaultRole: "contracts_User",
+  // Neutral fallback; the branding plugin's faviconUrl takes precedence.
   fev_Icon:
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAAALlJREFUaEPtmN0NwjAMBpNxYDKYiM1Yp90g93CKStH1NbIdfz921Dker2Pc+Js1cDF7MXAxASMGYkAigBI6vh9ZwoXP53uZoAYcvhwdA3mAVbI2aSb+9zFKU4IURB6j/HoPUIEa2G3iGIAhQQDlAUIoE2diabIklISS0NoFPebo77RF6OenEF3QntOm128he0GKrwHyACFoz2MgBqSGkpAEcHs47oHtN5AFakACqMNjQEMoE8SABFCHn4HE2zGHSLeEAAAAAElFTkSuQmCC",
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%2364748b'/%3E%3Ctext x='24' y='34' text-anchor='middle' font-family='system-ui,Helvetica,Arial,sans-serif' font-size='28' font-weight='700' fill='%23fff'%3ES%3C/text%3E%3C/svg%3E",
   googleClientId: process.env.REACT_APP_GOOGLECLIENTID
     ? `${process.env.REACT_APP_GOOGLECLIENTID}`
     : "",

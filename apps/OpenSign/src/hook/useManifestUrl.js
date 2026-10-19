@@ -1,5 +1,11 @@
 import { useEffect, useMemo } from "react";
 
+// Fallback favicon is an SVG data URI; uploaded ones are usually PNG.
+export const iconType = (src) =>
+  src?.startsWith("data:image/svg") || /\.svg(\?|$)/i.test(src || "")
+    ? "image/svg+xml"
+    : "image/png";
+
 export function useManifestUrl(appName, logo) {
   const url = useMemo(() => {
     const start_url = window.location.origin || ".";
@@ -12,9 +18,9 @@ export function useManifestUrl(appName, logo) {
       background_color: "#ffffff",
       ...(logo && {
         icons: [
-          { src: logo, type: "image/png", sizes: "64x64 32x32 24x24 16x16" },
-          { src: logo, type: "image/png", sizes: "192x192" },
-          { src: logo, type: "image/png", sizes: "512x512" }
+          { src: logo, type: iconType(logo), sizes: "64x64 32x32 24x24 16x16" },
+          { src: logo, type: iconType(logo), sizes: "192x192" },
+          { src: logo, type: iconType(logo), sizes: "512x512" }
         ]
       })
     };

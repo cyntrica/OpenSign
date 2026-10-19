@@ -728,13 +728,13 @@ export const mailTemplate = param => {
   const safeExpireDate = escapeHtml(param.localExpireDate);
   const subject = `${param.senderName} has requested you to sign "${param.title}"`;
   const AppName = appName;
-  const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
-  const logo = `<img src='${logoSrc}' height='50' />`;
+  // No branded logo configured: omit the image rather than fall back to upstream's.
+  const logo = emailLogoUrl ? `<div style='padding:10px'><img src='${emailLogoUrl}' height='50' /></div>` : '';
 
   const body =
-    "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background:white;padding-bottom:20px'><div style='padding:10px'>" +
+    "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background:white;padding-bottom:20px'>" +
     logo +
-    `</div><div style='padding:2px;font-family:system-ui;background-color:${themeColor}'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Digital Signature Request</p></div><div><p style='padding:20px;font-size:14px;margin-bottom:10px'>` +
+    `<div style='padding:2px;font-family:system-ui;background-color:${themeColor}'><p style='font-size:20px;font-weight:400;color:white;padding-left:20px'>Digital Signature Request</p></div><div><p style='padding:20px;font-size:14px;margin-bottom:10px'>` +
     safeSenderName +
     ' has requested you to review and sign <strong>' +
     safeTitle +

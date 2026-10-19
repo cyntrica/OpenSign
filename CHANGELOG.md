@@ -16,6 +16,13 @@ Merged upstream tags v2.41.0–v2.41.3 (18 files + 7 locales; only conflicts wer
 - **Fork deviation**: `createBatchDocs` keeps the server-derived `public_url` for signing links. Upstream switched to the client-supplied `Origin` header, which would let any authenticated caller point links in SineSeal-sent emails at an arbitrary domain.
 - Client `package.json` version set to 2.41.3.
 
+### De-branding: remaining OpenSign leaks from the 2026-10-18 sign-flow test
+
+- **Email logo**: signature-request, decline, signed-notify, completed and forward emails (server `Utils.js` `mailTemplate`, `declinedocument.js`, `ForwardDoc.js`, `pdf/PDF.js`; client `constant/Utils.js` `mailTemplate`) no longer fall back to OpenSign's hosted logo. They use the branding `emailLogoUrl` (client also `logoUrl`) and omit the image when none is set, matching the EmailBuilder samples.
+- **Setup pages**: removed the OpenSign Discord link from `AddAdmin` and `UpdateExistUserAdmin`, and the "Subscribe to OpenSign newsletter" checkbox from `AddAdmin`. That checkbox sent the new admin's name, email and domain to `app.opensignlabs.com`; the `newsletter` cloud function (`Newsletter.js`) is removed too.
+- **Fallback logo and favicon**: `appInfo.applogo` (header, login, signup, guest login) now uses a neutral `logo-fallback.svg` wordmark instead of the OpenSign `logo.png`, and `appInfo.fev_Icon` is a neutral SVG instead of the OpenSign mark (favicon `<link>` and manifest icons now declare `image/svg+xml` for SVG sources). Branding `logoUrl`/`logoDarkUrl`/`faviconUrl` still take precedence. The header no longer reads the cached `appLogo` key, which older builds filled with the OpenSign asset URL.
+- **Locales**: `verify-email` and `daily-quota-reached` (rendered strings) no longer name OpenSign or `quotas@opensignlabs.com`, in all 7 locales. Other OpenSign-naming keys are unreferenced in the client and left as upstream to keep locale merges clean.
+
 ## [Unreleased] — 2026-07-26
 
 ### De-branding backlog completed

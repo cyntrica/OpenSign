@@ -39,8 +39,9 @@ export default async function forwardDoc(request) {
       }
 
       try {
-        const logoSrc = emailLogoUrl || 'https://qikinnovation.ams3.digitaloceanspaces.com/logo.png';
-        const logo = `<img src='${logoSrc}' height='50' style='padding:20px'/>`;
+        const logo = emailLogoUrl
+          ? `<img src='${emailLogoUrl}' height='50' style='padding:20px'/>`
+          : '';
         const themeColor = '#47a3ad';
 
         const results = await Promise.allSettled(

@@ -8,7 +8,7 @@ import {
   contractUsers,
   saveLanguageInLocal
 } from "../constant/Utils";
-import logo from "../assets/images/logo.png";
+import logo from "../assets/images/logo-fallback.svg";
 import { useBranding } from "../../../../plugins/branding/frontend/BrandingProvider";
 import { appInfo } from "../constant/appinfo";
 import Parse from "parse";
